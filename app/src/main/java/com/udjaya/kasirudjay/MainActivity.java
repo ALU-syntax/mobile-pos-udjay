@@ -481,16 +481,81 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
+//    @SuppressLint("MissingPermission")
+//    public AsyncEscPosPrinter getAsyncPrintOpenBill(DeviceConnection printerConnection, OpenBill data){
+//        try {
+//            String item = "";
+//            if (!data.getItem().isEmpty()){
+//                for (ItemOpenBill itemOpenBill : data.getItem()){
+//                    if(itemOpenBill.getProduct_id() != null || itemOpenBill.getProduct_id() != "null"){
+//                        if(Objects.equals(itemOpenBill.getNama_product(), itemOpenBill.getNama_variant())){
+//                            item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + itemOpenBill.getNama_product() + "</b>[C] \n";
+//                        }else{
+//                            item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + itemOpenBill.getNama_product() + "-" + itemOpenBill.getNama_variant() + "</b>[C] \n";
+//                        }
+//
+//                    }else{
+//                        item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + "custom" +"</b>[C]\n";
+//                    }
+//
+//                    for(ModifierOpenBill modifierOpenBill: itemOpenBill.getModifier()){
+//                        item +=  "[L]" +modifierOpenBill.getName()+"\n";
+//                    }
+//                }
+//
+//            }
+//
+//
+//            String deviceBrand = Build.BRAND;
+//            System.out.println("Device Brand: " + deviceBrand);
+//            // Buat objek Date saat ini
+//            Date currentDate = new Date();
+//
+//            // Buat instance SimpleDateFormat untuk format tanggal
+//            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+//
+//            // Buat instance SimpleDateFormat untuk format waktu
+//            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+//
+//            // Format tanggal dan waktu
+//            String formattedDate = dateFormat.format(currentDate);
+//            String formattedTime = timeFormat.format(currentDate);
+//
+//            AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+//            return printer.addTextToPrint(
+//                    "[C]ADDITIONAL ORDER\n" +
+//                            "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
+//                            "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
+//                            "[L]" + data.getUser().getName() + "[C][R]" + deviceBrand + "\n" +
+//                            "[C]--------------------------------\n" +
+//                            "[C]Dine In\n" +
+//                            "[C]--------------------------------\n" +
+//                            item
+//            );
+//
+//        } catch (Exception e) {
+////            logErrorToApi(e, data);
+//            throw new RuntimeException(e);
+//        }
+//
+//    }
+
     @SuppressLint("MissingPermission")
     public AsyncEscPosPrinter getAsyncPrintOpenBill(DeviceConnection printerConnection, OpenBill data){
         try {
             String item = "";
+            Log.d(TAG, "getAsyncPrintOpenBill: " + data);
             if (!data.getItem().isEmpty()){
                 for (ItemOpenBill itemOpenBill : data.getItem()){
                     if(itemOpenBill.getProduct_id() != null || itemOpenBill.getProduct_id() != "null"){
-                        item += "[L]<b>"+ 1 + "x " + itemOpenBill.getNama_product() + "-" + itemOpenBill.getNama_variant() + "</b>[C] \n";
+                        if(Objects.equals(itemOpenBill.getNama_product(), itemOpenBill.getNama_variant())){
+                            item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + itemOpenBill.getNama_product() + "</b>[C] \n";
+                        }else{
+                            item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + itemOpenBill.getNama_product() + "-" + itemOpenBill.getNama_variant() + "</b>[C] \n";
+                        }
+
                     }else{
-                        item += "[L]<b>"+ 1 + "x " + "custom" +"</b>[C]\n";
+                        item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + "custom" +"</b>[C]\n";
                     }
 
                     for(ModifierOpenBill modifierOpenBill: itemOpenBill.getModifier()){
@@ -529,7 +594,7 @@ public class MainActivity extends AppCompatActivity {
             );
 
         } catch (Exception e) {
-            logErrorToApi(e, data);
+//            logErrorToApi(e, data);
             throw new RuntimeException(e);
         }
 
@@ -565,9 +630,14 @@ public class MainActivity extends AppCompatActivity {
             catatanBefore = data.getCatatan();
 
             if(data.getProduct() != null){
-                item += "[L]<b>"+ quantityProduct + "x " + data.getProduct().getName() + "-" +data.getVariant().getName() + "</b>[C] \n";
+                if(Objects.equals(data.getProduct().getName(), data.getVariant().getName())){
+                    item += "[L]<b>"+ 1 + "x " + data.getProduct().getName() + "</b>[C] \n";
+                }else{
+                    item += "[L]<b>"+ 1 + "x " + data.getProduct().getName() + "-" +data.getVariant().getName() + "</b>[C] \n";
+                }
+
             }else{
-                item += "[L]<b>"+ quantityProduct + "x " + "custom" +"</b>[C]\n";
+                item += "[L]<b>"+ 1 + "x " + "custom" +"</b>[C]\n";
             }
 
             for(String namaModifier: data.getModifier()){
