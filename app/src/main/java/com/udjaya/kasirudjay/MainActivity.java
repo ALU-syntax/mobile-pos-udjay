@@ -31,11 +31,18 @@ import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection;
 import com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections;
 import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
 import com.udjaya.kasirudjay.api.ApiService;
+import com.udjaya.kasirudjay.model.DeviceInfo;
+import com.udjaya.kasirudjay.model.GetOpenBillStruk;
 import com.udjaya.kasirudjay.model.GetStruk;
+import com.udjaya.kasirudjay.model.ItemOpenBill;
+import com.udjaya.kasirudjay.model.LogRequest;
+import com.udjaya.kasirudjay.model.ModifierOpenBill;
+import com.udjaya.kasirudjay.model.OpenBill;
 import com.udjaya.kasirudjay.model.Tax;
 import com.udjaya.kasirudjay.model.TransactionItems;
 import com.udjaya.kasirudjay.model.Transactions;
 import com.udjaya.kasirudjay.model.User;
+import com.udjaya.kasirudjay.model.UserInfo;
 import com.udjaya.kasirudjay.services.AsyncBluetoothEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrinter;
@@ -43,9 +50,11 @@ import com.udjaya.kasirudjay.utils.RClient;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -93,7 +102,33 @@ public class MainActivity extends AppCompatActivity {
         MainWebViewClient viewClient = new MainWebViewClient();
         webView.setWebViewClient(viewClient);
 
-        webView.loadUrl("https://udjaya.neidra.my.id/");
+        webView.loadUrl("https://udjaya.neidra.my.id/kasir");
+    }
+
+    private void logErrorToApi(Exception e, OpenBill data) {
+        // Prepare log request
+        DeviceInfo deviceInfo = new DeviceInfo(Build.BRAND, Build.MODEL, Build.VERSION.RELEASE);
+        UserInfo userInfo = new UserInfo(data.getUser().getId(), data.getUser().getName());
+        LogRequest logRequest = new LogRequest(new Date().toString(), e.getMessage(), Log.getStackTraceString(e), deviceInfo, userInfo);
+
+        // Send log to API
+        Call<Void> call = apiService.logError(logRequest);
+
+        call.enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Log.d("LogError", "Log sent successfully");
+                } else {
+                    Log.e("LogError", "Failed to send log: " + response.errorBody());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Log.e("LogError", "Error sending log", t);
+            }
+        });
     }
 
     public static String formatRupiah(String angka, String prefix) {
@@ -176,6 +211,24 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<GetStruk> call, Throwable t) {
+                Log.d(TAG, "onFailure: " + t.getMessage());
+            }
+        });
+    }
+
+    public void getOpenBillOrderStruk(String id){
+        Call<GetOpenBillStruk> callApi = apiService.getOpenBillStrukOrder(id);
+        callApi.enqueue(new Callback<GetOpenBillStruk>() {
+            @Override
+            public void onResponse(Call<GetOpenBillStruk> call, Response<GetOpenBillStruk> response) {
+                assert response.body() != null;
+                OpenBill openBill = response.body().getData();
+
+                printBluetoothOpenBill(openBill);
+            }
+
+            @Override
+            public void onFailure(Call<GetOpenBillStruk> call, Throwable t) {
                 Log.d(TAG, "onFailure: " + t.getMessage());
             }
         });
@@ -284,6 +337,25 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void printBluetoothOpenBill(OpenBill data){
+        this.checkBluetoothPermissions(() -> {
+            new AsyncBluetoothEscPosPrint(
+                    this,
+                    new AsyncEscPosPrint.OnPrintFinished() {
+                        @Override
+                        public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+                            Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+                        }
+
+                        @Override
+                        public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+                            Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+                        }
+                    }
+            ).execute(this.getAsyncPrintOpenBill(selectedDevice, data));
+        });
+    }
+
     public void printBluetooth(Transactions transactions, List<TransactionItems> transactionItems, User user, String device, boolean isOrder) {
         if(isOrder){
             this.checkBluetoothPermissions(() -> {
@@ -330,7 +402,11 @@ public class MainActivity extends AppCompatActivity {
         int subTotal = 0;
         for (TransactionItems data : transactionItems){
             if(data.getProduct() != null){
-                item += "[L]<b>" + data.getProduct().getName() + " - " + data.getVariant().getName() +"</b>\n";
+                if(Objects.equals(data.getProduct().getName(), data.getVariant().getName())){
+                    item += "[L]<b>" + data.getProduct().getName()+"</b>\n";
+                }else{
+                    item += "[L]<b>" + data.getProduct().getName() + " - " + data.getVariant().getName() +"</b>\n";
+                }
             }else{
                 item += "[L]<b>" + "custom" +"</b>\n";
             }
@@ -406,13 +482,92 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @SuppressLint("MissingPermission")
+    public AsyncEscPosPrinter getAsyncPrintOpenBill(DeviceConnection printerConnection, OpenBill data){
+        try {
+            String item = "";
+            if (!data.getItem().isEmpty()){
+                for (ItemOpenBill itemOpenBill : data.getItem()){
+                    if(itemOpenBill.getProduct_id() != null || itemOpenBill.getProduct_id() != "null"){
+                        item += "[L]<b>"+ 1 + "x " + itemOpenBill.getNama_product() + "-" + itemOpenBill.getNama_variant() + "</b>[C] \n";
+                    }else{
+                        item += "[L]<b>"+ 1 + "x " + "custom" +"</b>[C]\n";
+                    }
+
+                    for(ModifierOpenBill modifierOpenBill: itemOpenBill.getModifier()){
+                        item +=  "[L]" +modifierOpenBill.getName()+"\n";
+                    }
+                }
+
+            }
+
+
+            String deviceBrand = Build.BRAND;
+            System.out.println("Device Brand: " + deviceBrand);
+            // Buat objek Date saat ini
+            Date currentDate = new Date();
+
+            // Buat instance SimpleDateFormat untuk format tanggal
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+            // Buat instance SimpleDateFormat untuk format waktu
+            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+
+            // Format tanggal dan waktu
+            String formattedDate = dateFormat.format(currentDate);
+            String formattedTime = timeFormat.format(currentDate);
+
+            AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+            return printer.addTextToPrint(
+                    "[C]ADDITIONAL ORDER\n" +
+                            "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
+                            "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
+                            "[L]" + data.getUser().getName() + "[C][R]" + deviceBrand + "\n" +
+                            "[C]--------------------------------\n" +
+                            "[C]Dine In\n" +
+                            "[C]--------------------------------\n" +
+                            item
+            );
+
+        } catch (Exception e) {
+            logErrorToApi(e, data);
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    @SuppressLint("MissingPermission")
     public AsyncEscPosPrinter getAsyncEscPosPrinterOrder(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems, User user, String device){
         String item = "";
+        String productIdBefore = "";
+        String variantIdBefore = "";
+        String catatanBefore = "";
+        List<String> modifierBefore = Arrays.asList("");;
+        int quantityProduct = 1;
+
         for (TransactionItems data : transactionItems){
-            if(data.getProduct() != null){
-                item += "[L]<b>"+ 1 + "x " + data.getProduct().getName() + "-" +data.getVariant().getName() + "</b>[C] \n";
+            // Memeriksa apakah kedua list sama persis
+            boolean areEqual = modifierBefore.equals(data.getModifier());
+            modifierBefore = data.getModifier();
+
+            // pengecekan untuk menghitung quantity
+            if(Objects.equals(productIdBefore, data.getProduct_id()) && Objects.equals(variantIdBefore, data.getVariant_id()) && Objects.equals(catatanBefore, data.getCatatan())){
+                if(areEqual){
+                    quantityProduct += 1;
+                }else{
+                    quantityProduct = 1;
+                }
             }else{
-                item += "[L]<b>"+ 1 + "x " + "custom" +"</b>[C]\n";
+                quantityProduct = 1;
+            }
+
+            productIdBefore = data.getProduct_id();
+            variantIdBefore = data.getVariant_id();
+            catatanBefore = data.getCatatan();
+
+            if(data.getProduct() != null){
+                item += "[L]<b>"+ quantityProduct + "x " + data.getProduct().getName() + "-" +data.getVariant().getName() + "</b>[C] \n";
+            }else{
+                item += "[L]<b>"+ quantityProduct + "x " + "custom" +"</b>[C]\n";
             }
 
             for(String namaModifier: data.getModifier()){
@@ -432,9 +587,10 @@ public class MainActivity extends AppCompatActivity {
         // Format tanggal dan waktu
         String formattedDate = dateFormat.format(currentDate);
         String formattedTime = timeFormat.format(currentDate);
+
         AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
         return printer.addTextToPrint(
-                                "[C]<font size='big'>ADDITIONAL ORDER</font>\n" +
+                                "[C]<font >ADDITIONAL ORDER</font>\n" +
                                 "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
                                 "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
                                 "[L]" + user.getName() + "[C][R]" + device + "\n" +
@@ -453,21 +609,6 @@ public class MainActivity extends AppCompatActivity {
             mContext = c;
         }
 
-        /** Metode yang akan dipanggil dari JavaScript */
-        @JavascriptInterface
-        public void processButtonClick(String buttonId) {
-            Log.d("WebAppInterface", "Button clicked: " + buttonId);
-            // Anda bisa menambahkan logika di sini untuk menangani klik tombol
-            // Misalnya, panggil metode getDataStruk atau browseBluetoothDevice
-//            if (buttonId.equals("cetak-struk")) {
-//                // Misalnya, panggil getDataStruk dengan ID tertentu
-//                MainActivity mainActivity = (MainActivity) mContext;
-//                mainActivity.getDataStruk("your_id_here");
-//            } else if (buttonId.equals("list-bluetooth-device")) {
-//                MainActivity mainActivity = (MainActivity) mContext;
-//                mainActivity.browseBluetoothDevice();
-//            }
-        }
 
         /** Metode baru untuk menerima data dari HTML */
         @JavascriptInterface
@@ -478,8 +619,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void handleSimpanBill(String id){
-
+        public void handlePrintOpenBill(String id){
+            getOpenBillOrderStruk(id);
         }
     }
 }
