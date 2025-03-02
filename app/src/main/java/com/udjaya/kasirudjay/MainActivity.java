@@ -184,6 +184,14 @@ public class MainActivity extends AppCompatActivity {
                 browseBluetoothDevice();
                 return true;
             }
+
+            if (url.startsWith("intent://cetak-struk-history")){
+                String id = uri.getQueryParameter("id");
+                Log.d(TAG, "masok: " + id);
+                getDataStrukHistory(id);
+                return true;
+            }
+
             return false;
 
         }
@@ -206,6 +214,31 @@ public class MainActivity extends AppCompatActivity {
                 String device = response.body().getDevice();
 
                 printBluetooth(transactions, detail, user, device,  isOrder);
+
+            }
+
+            @Override
+            public void onFailure(Call<GetStruk> call, Throwable t) {
+                Log.d(TAG, "onFailure: " + t.getMessage());
+            }
+        });
+    }
+
+    public void getDataStrukHistory(String id){
+        Call<GetStruk> call = apiService.getStruk(id);
+        call.enqueue(new Callback<GetStruk>() {
+            @Override
+            public void onResponse(Call<GetStruk> call, Response<GetStruk> response) {
+                Log.d("Transaction API", "onResponse: " + response);
+                Log.d("Transaction API", "onResponse: " + response.body());
+                assert response.body() != null;
+                Log.d("Transaction API", "onResponse: " + response.body().getTransaction());
+                assert response.body() != null;
+                Transactions transactions = response.body().getTransaction();
+
+                List<TransactionItems> detail = response.body().getTransactionItems();
+
+                printBluetoothHistoryTransaction(transactions, detail);
 
             }
 
@@ -394,6 +427,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void printBluetoothHistoryTransaction(Transactions transactions, List<TransactionItems> transactionItems) {
+        this.checkBluetoothPermissions(() -> {
+            new AsyncBluetoothEscPosPrint(
+                    this,
+                    new AsyncEscPosPrint.OnPrintFinished() {
+                        @Override
+                        public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+                            Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+                        }
+
+                        @Override
+                        public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+                            Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+                        }
+                    }
+            ).execute(this.getAsyncEscPosPrinterHistoryTransaction(selectedDevice, transactions, transactionItems));
+        });
+    }
+
     @SuppressLint("SimpleDateFormat")
     public AsyncEscPosPrinter getAsyncEscPosPrinter(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems) {
         String item = "";
@@ -481,64 +533,96 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-//    @SuppressLint("MissingPermission")
-//    public AsyncEscPosPrinter getAsyncPrintOpenBill(DeviceConnection printerConnection, OpenBill data){
-//        try {
-//            String item = "";
-//            if (!data.getItem().isEmpty()){
-//                for (ItemOpenBill itemOpenBill : data.getItem()){
-//                    if(itemOpenBill.getProduct_id() != null || itemOpenBill.getProduct_id() != "null"){
-//                        if(Objects.equals(itemOpenBill.getNama_product(), itemOpenBill.getNama_variant())){
-//                            item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + itemOpenBill.getNama_product() + "</b>[C] \n";
-//                        }else{
-//                            item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + itemOpenBill.getNama_product() + "-" + itemOpenBill.getNama_variant() + "</b>[C] \n";
-//                        }
-//
-//                    }else{
-//                        item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + "custom" +"</b>[C]\n";
-//                    }
-//
-//                    for(ModifierOpenBill modifierOpenBill: itemOpenBill.getModifier()){
-//                        item +=  "[L]" +modifierOpenBill.getName()+"\n";
-//                    }
-//                }
-//
-//            }
-//
-//
-//            String deviceBrand = Build.BRAND;
-//            System.out.println("Device Brand: " + deviceBrand);
-//            // Buat objek Date saat ini
-//            Date currentDate = new Date();
-//
-//            // Buat instance SimpleDateFormat untuk format tanggal
-//            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-//
-//            // Buat instance SimpleDateFormat untuk format waktu
-//            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-//
-//            // Format tanggal dan waktu
-//            String formattedDate = dateFormat.format(currentDate);
-//            String formattedTime = timeFormat.format(currentDate);
-//
-//            AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
-//            return printer.addTextToPrint(
-//                    "[C]ADDITIONAL ORDER\n" +
-//                            "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
-//                            "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
-//                            "[L]" + data.getUser().getName() + "[C][R]" + deviceBrand + "\n" +
-//                            "[C]--------------------------------\n" +
-//                            "[C]Dine In\n" +
-//                            "[C]--------------------------------\n" +
-//                            item
-//            );
-//
-//        } catch (Exception e) {
-////            logErrorToApi(e, data);
-//            throw new RuntimeException(e);
-//        }
-//
-//    }
+    @SuppressLint("SimpleDateFormat")
+    public AsyncEscPosPrinter getAsyncEscPosPrinterHistoryTransaction(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems) {
+        String item = "";
+        String taxItem = "";
+        int totalPajak = 0;
+        int subTotal = 0;
+        for (TransactionItems data : transactionItems){
+            if(data.getProduct() != null){
+                if(Objects.equals(data.getProduct().getName(), data.getVariant().getName())){
+                    item += "[L]<b>" + data.getProduct().getName()+"</b>\n";
+                }else{
+                    item += "[L]<b>" + data.getProduct().getName() + " - " + data.getVariant().getName() +"</b>\n";
+                }
+            }else{
+                item += "[L]<b>" + "custom" +"</b>\n";
+            }
+
+            for(String namaModifier: data.getModifier()){
+                item +=  "[C]<b>" +namaModifier+"</b>\n";
+            }
+            if(data.getVariant() != null){
+                item += "[L]<b>"+ 1 + "x" + "</b>[C]<b>@" +data.getVariant().getHarga()+"</b>\n";
+                subTotal += data.getVariant().getHarga();
+            }
+
+            item += "[C]--------------------------------\n";
+        }
+
+        for(Tax tax : transactions.getTax()){
+            int valueTax = (Integer.parseInt(tax.getAmount()) * subTotal) / 100;
+            taxItem += "[L]<b>"+ tax.getName() + "(" + tax.getAmount() + tax.getSatuan() + ")" + "</b>[R]<b>" + formatRupiah(String.valueOf(valueTax), "Rp. ") +"</b>\n";
+            totalPajak += valueTax;
+        }
+
+//        subTotal -= totalPajak;
+        // Format tanggal
+        SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault());
+        inputFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+        Date date = null;
+        try {
+            date = inputFormat.parse(transactions.getCreated_at());
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Buat instance SimpleDateFormat untuk format tanggal
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+        // Buat instance SimpleDateFormat untuk format waktu
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+
+        // Format tanggal dan waktu
+        String formattedDate = dateFormat.format(date);
+        String formattedTime = timeFormat.format(date);
+
+        int resultTotal = Integer.parseInt(transactions.getTotal());
+
+        SimpleDateFormat format = new SimpleDateFormat("'on' yyyy-MM-dd 'at' HH:mm:ss");
+        AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+        return printer.addTextToPrint(
+                "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.logo_red, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
+                        "[L]\n" +
+                        "[C]" + transactions.getOutlet().getAddress() + "\n" +
+                        "[C]" + transactions.getOutlet().getPhone()+ "\n" +
+                        "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
+                        "[L]Collected By [C][R]" + transactions.getUser().getName() + "\n" +
+                        "[C]--------------------------------\n" +
+                        "[C]<font size='big'>THIS IS COPY</font>\n"+
+                        "[C]--------------------------------\n" +
+                        "[C]\n" +
+                        "[C]--------------------------------\n" +
+                        "[C] *dine in* \n" +
+                        item +
+                        "[L]Subtotal :[C]" + formatRupiah(String.valueOf(subTotal), "Rp. ") + "\n" +
+                        "[L]Discount :[C]" + formatRupiah(String.valueOf(transactions.getTotal_diskon()), "Rp. ") + "\n" +
+                        "[L]Rounding :[C]" + formatRupiah(String.valueOf(transactions.getRounding_amount()), "Rp. ") +"\n" +
+                        taxItem +
+                        "[C]--------------------------------\n" +
+                        "[L]Total :[C]" + formatRupiah(String.valueOf(resultTotal), "Rp. ") + "\n" +
+                        "[C]================================\n" +
+                        "[L]" + transactions.getNama_tipe_pembayaran() + "[C]" + formatRupiah(String.valueOf(transactions.getNominal_bayar()), "Rp. ") + "\n" +
+                        "[L]Change [C]" + formatRupiah(String.valueOf(transactions.getChange()), "Rp. ") + "\n" +
+                        "[L]\n" +
+                        "[C]--------------------------------\n" +
+                        "[L]Instagram: ud.djaya[C][R] \n" +
+                        "\n" +
+                        "[C]--------------------------------\n" +
+                        "[C]<font size='small'>TERIMA KASIH</font>\n"
+        );
+    }
 
     @SuppressLint("MissingPermission")
     public AsyncEscPosPrinter getAsyncPrintOpenBill(DeviceConnection printerConnection, OpenBill data){
