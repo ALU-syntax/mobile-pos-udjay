@@ -2,7 +2,7 @@ package com.udjaya.kasirudjay.model;
 
 public class ModifierOpenBill {
     private int id;
-    private String name;
+    private String nama;
     private int harga;
     private String tmpIdProduct;
 
@@ -15,11 +15,11 @@ public class ModifierOpenBill {
     }
 
     public String getName() {
-        return name;
+        return nama;
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.nama = name;
     }
 
     public int getHarga() {

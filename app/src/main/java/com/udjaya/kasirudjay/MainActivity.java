@@ -2,8 +2,11 @@ package com.udjaya.kasirudjay;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -15,9 +18,11 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresPermission;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -68,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
     private Retrofit retrofit;
 
     private BluetoothConnection selectedDevice;
-    public BluetoothConnection[] bluetoothDevicesList = (new BluetoothPrintersConnections()).getList();
+    public BluetoothConnection[] bluetoothDevicesList;
 
 
     private static final String TAG = "MainActivity";
@@ -84,6 +89,10 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        requestBluetoothPermissions(this);
+        checkBluetoothStatus();
+
+        bluetoothDevicesList = (new BluetoothPrintersConnections()).getList();
         if(bluetoothDevicesList != null){
             if(bluetoothDevicesList.length > 0){
                 selectedDevice = bluetoothDevicesList[0];
@@ -280,22 +289,45 @@ public class MainActivity extends AppCompatActivity {
     public static final int PERMISSION_BLUETOOTH_ADMIN = 2;
     public static final int PERMISSION_BLUETOOTH_CONNECT = 3;
     public static final int PERMISSION_BLUETOOTH_SCAN = 4;
+    public static final int PERMISSION_ACCESS_FINE_LOCATION = 5;
+    public static final int PERMISSION_ACCESS_COARSE_LOCATION = 6;
 
     public OnBluetoothPermissionsGranted onBluetoothPermissionsGranted;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            switch (requestCode) {
-                case MainActivity.PERMISSION_BLUETOOTH:
-                case MainActivity.PERMISSION_BLUETOOTH_ADMIN:
-                case MainActivity.PERMISSION_BLUETOOTH_CONNECT:
-                case MainActivity.PERMISSION_BLUETOOTH_SCAN:
-                    this.checkBluetoothPermissions(this.onBluetoothPermissionsGranted);
+        if (requestCode == PERMISSION_BLUETOOTH) {
+            boolean allPermissionsGranted = true;
+            for (int grantResult : grantResults) {
+                if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                    allPermissionsGranted = false;
                     break;
+                }
+            }
+
+            if (allPermissionsGranted) {
+                // Semua izin diberikan
+                if (onBluetoothPermissionsGranted != null) {
+                    onBluetoothPermissionsGranted.onPermissionsGranted();
+                }
+            } else {
+                // Setidaknya satu izin ditolak
+                // Berikan penjelasan kepada pengguna jika perlu
+                Toast.makeText(this, "Izin Bluetooth diperlukan untuk mencetak.", Toast.LENGTH_SHORT).show();
             }
         }
+
+//        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//            switch (requestCode) {
+//                case MainActivity.PERMISSION_BLUETOOTH:
+//                case MainActivity.PERMISSION_BLUETOOTH_ADMIN:
+//                case MainActivity.PERMISSION_BLUETOOTH_CONNECT:
+//                case MainActivity.PERMISSION_BLUETOOTH_SCAN:
+//                    this.checkBluetoothPermissions(this.onBluetoothPermissionsGranted);
+//                    break;
+//            }
+//        }
     }
 
     public void checkBluetoothPermissions(OnBluetoothPermissionsGranted onBluetoothPermissionsGranted) {
@@ -330,6 +362,131 @@ public class MainActivity extends AppCompatActivity {
 //        } else {
 //            this.onBluetoothPermissionsGranted.onPermissionsGranted();
 //        }
+    }
+
+    @SuppressLint("MissingPermission")
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case PERMISSION_BLUETOOTH:
+                if (resultCode == Activity.RESULT_OK) {
+                    // Bluetooth diaktifkan, lanjutkan operasi
+                    requestBluetoothPermissions(this);
+                } else {
+                    // Bluetooth tidak diaktifkan, informasikan kepada pengguna
+                    startBluetoothOperations(this);
+                    Toast.makeText(this, "Bluetooth harus diaktifkan untuk menggunakan printer thermal.", Toast.LENGTH_SHORT).show();
+//                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+//                    this.startActivityForResult(enableBtIntent, PERMISSION_BLUETOOTH);
+//                    requestBluetoothPermissions(this);
+                }
+                break;
+            // Tambahkan kasus untuk kode hasil lainnya jika diperlukan
+            default:
+                break;
+        }
+    }
+
+
+    private void requestBluetoothPermissions(Activity activity) {
+        String[] permissions = {
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+        };
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+//            permissions = new String[]{
+//                    Manifest.permission.BLUETOOTH_CONNECT,
+//                    Manifest.permission.BLUETOOTH_SCAN,
+//                    Manifest.permission.ACCESS_FINE_LOCATION,
+//                    Manifest.permission.ACCESS_COARSE_LOCATION
+//            };
+//        } else {
+//            permissions = new String[]{
+//                    Manifest.permission.BLUETOOTH,
+//                    Manifest.permission.BLUETOOTH_ADMIN,
+//                    Manifest.permission.ACCESS_FINE_LOCATION,
+//                    Manifest.permission.ACCESS_COARSE_LOCATION
+//            };
+//        }
+
+
+        // Daftar izin yang belum diberikan
+        boolean allPermissionsGranted = true;
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                allPermissionsGranted = false;
+                break;
+            }
+        }
+
+        if (!allPermissionsGranted) {
+            Log.d(TAG, "requestBluetoothPermissions: Masok Permission UnGranted");
+            // Minta izin jika belum diberikan
+            ActivityCompat.requestPermissions(this, permissions, PERMISSION_BLUETOOTH);
+//            checkBluetoothPermissions(this.onBluetoothPermissionsGranted);
+
+        } else {
+            // Semua izin sudah diberikan
+            Log.d(TAG, "requestBluetoothPermissions: " + onBluetoothPermissionsGranted);
+            if (onBluetoothPermissionsGranted != null) {
+//                onBluetoothPermissionsGranted.onPermissionsGranted();
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                activity.startActivityForResult(enableBtIntent, PERMISSION_BLUETOOTH);
+
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private static void startBluetoothOperations(Activity activity) {
+//         Kode untuk memulai operasi Bluetooth setelah permission diberikan
+//         Misalnya, inisialisasi BluetoothAdapter, memulai pemindaian, dll.
+//         Contoh:
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (bluetoothAdapter != null) {
+            if (!bluetoothAdapter.isEnabled()) {
+                // Minta pengguna untuk mengaktifkan Bluetooth
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                activity.startActivityForResult(enableBtIntent, PERMISSION_BLUETOOTH);
+            } else {
+                // Mulai pemindaian perangkat Bluetooth
+//                 startScan();
+            }
+        } else {
+            // Perangkat tidak mendukung Bluetooth
+            Toast.makeText(activity, "Perangkat tidak mendukung Bluetooth", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void checkBluetoothStatus() {
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (bluetoothAdapter == null) {
+            // Perangkat tidak mendukung Bluetooth
+            Toast.makeText(this, "Perangkat ini tidak mendukung Bluetooth", Toast.LENGTH_SHORT).show();
+        } else {
+            if (!bluetoothAdapter.isEnabled()) {
+                // Bluetooth tidak aktif, tampilkan dialog untuk mengaktifkannya
+                showBluetoothAlert();
+            } else {
+                // Bluetooth aktif, lanjutkan dengan logika aplikasi Anda
+                Toast.makeText(this, "Bluetooth sudah aktif", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void showBluetoothAlert() {
+        new AlertDialog.Builder(this)
+                .setTitle("Aktifkan Bluetooth")
+                .setMessage("Bluetooth tidak aktif. Apakah Anda ingin mengaktifkannya?")
+                .setPositiveButton("Ya", (dialog, which) -> {
+                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    startActivityForResult(enableBtIntent, PERMISSION_BLUETOOTH);
+                })
+                .setNegativeButton("Tidak", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
 
