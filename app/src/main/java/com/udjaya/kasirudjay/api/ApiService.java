@@ -1,6 +1,7 @@
 package com.udjaya.kasirudjay.api;
 
 import com.udjaya.kasirudjay.model.GetOpenBillStruk;
+import com.udjaya.kasirudjay.model.shiftorder.GetShiftOrderStruk;
 import com.udjaya.kasirudjay.model.GetStruk;
 import com.udjaya.kasirudjay.model.LogRequest;
 
@@ -19,4 +20,7 @@ public interface ApiService {
 
     @POST("api/logs")
     Call<Void> logError(@Body LogRequest logRequest);
+
+    @GET("api-print-shift-detail/{petty_cash_id}")
+    Call<GetShiftOrderStruk> getShiftOrderStruk(@Path("petty_cash_id") String id);
 }

@@ -27,6 +27,7 @@ public class Transactions {
     private Outlet outlet;
     private User user;
     private List<Tax> tax;
+    private String potongan_point;
 
     public List<Tax> getTax() {
         return tax;
@@ -218,5 +219,13 @@ public class Transactions {
 
     public void setUpdated_at(String updated_at) {
         this.updated_at = updated_at;
+    }
+
+    public String getPotongan_point() {
+        return potongan_point;
+    }
+
+    public void setPotongan_point(String potongan_point) {
+        this.potongan_point = potongan_point;
     }
 }

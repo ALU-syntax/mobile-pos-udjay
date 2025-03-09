@@ -48,6 +48,12 @@ import com.udjaya.kasirudjay.model.TransactionItems;
 import com.udjaya.kasirudjay.model.Transactions;
 import com.udjaya.kasirudjay.model.User;
 import com.udjaya.kasirudjay.model.UserInfo;
+import com.udjaya.kasirudjay.model.shiftorder.DataModifierTransaction;
+import com.udjaya.kasirudjay.model.shiftorder.DataPayment;
+import com.udjaya.kasirudjay.model.shiftorder.DataProductTransaction;
+import com.udjaya.kasirudjay.model.shiftorder.GetShiftOrderStruk;
+import com.udjaya.kasirudjay.model.shiftorder.PattyCash;
+import com.udjaya.kasirudjay.model.shiftorder.Payment;
 import com.udjaya.kasirudjay.services.AsyncBluetoothEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrinter;
@@ -194,10 +200,17 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            if (url.startsWith("intent://cetak-struk-history")){
+            if (url.startsWith("intent://struk-history-print")){
                 String id = uri.getQueryParameter("id");
                 Log.d(TAG, "masok: " + id);
                 getDataStrukHistory(id);
+                return true;
+            }
+
+            if(url.startsWith("intent://shift-order-print")){
+                String id = uri.getQueryParameter("id");
+                Log.d(TAG, "shift-order-print: ");
+                getDataStrukOrderShift(id);
                 return true;
             }
 
@@ -271,6 +284,24 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<GetOpenBillStruk> call, Throwable t) {
+                Log.d(TAG, "onFailure: " + t.getMessage());
+            }
+        });
+    }
+
+    public void getDataStrukOrderShift(String id){
+        Call<GetShiftOrderStruk> callApi = apiService.getShiftOrderStruk(id);
+        callApi.enqueue(new Callback<GetShiftOrderStruk>() {
+            @Override
+            public void onResponse(Call<GetShiftOrderStruk> call, Response<GetShiftOrderStruk> response) {
+                assert response.body() != null;
+                GetShiftOrderStruk orderStruk = response.body();
+
+                printShiftOrder(orderStruk.getPatty_cash(),orderStruk.getSold_product(), orderStruk.getSold_modifier(), orderStruk.getData_payment(), orderStruk.getData_product_transaction(), orderStruk.getData_modifier_transaction(), orderStruk.getRounding());
+            }
+
+            @Override
+            public void onFailure(Call<GetShiftOrderStruk> call, Throwable t) {
                 Log.d(TAG, "onFailure: " + t.getMessage());
             }
         });
@@ -603,6 +634,30 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void printShiftOrder(PattyCash pattyCash, int soldProduct, int soldModifier, List<DataPayment> dataPayments, List<DataProductTransaction> dataProductTransactions, List<DataModifierTransaction> dataModifierTransactions, int rounding){
+        this.checkBluetoothPermissions(() -> {
+            new AsyncBluetoothEscPosPrint(this, new AsyncEscPosPrint.OnPrintFinished() {
+                @Override
+                public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+                    Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+                }
+
+                @Override
+                public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+                    Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+                }
+            }).execute(this.getAsyncPrintShiftOrder(
+                    selectedDevice,
+                    pattyCash,
+                    soldProduct,
+                    soldModifier,
+                    dataPayments,
+                    dataProductTransactions,
+                    dataModifierTransactions,
+                    rounding));
+        });
+    }
+
     @SuppressLint("SimpleDateFormat")
     public AsyncEscPosPrinter getAsyncEscPosPrinter(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems) {
         String item = "";
@@ -842,7 +897,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @SuppressLint("MissingPermission")
-    public AsyncEscPosPrinter getAsyncEscPosPrinterOrder(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems, User user, String device){
+    public AsyncEscPosPrinter getAsyncEscPosPrinterOrder(DeviceConnection printerConnection,
+                                                         Transactions transactions,
+                                                         List<TransactionItems> transactionItems,
+                                                         User user, String device){
         String item = "";
         String productIdBefore = "";
         String variantIdBefore = "";
@@ -909,6 +967,120 @@ public class MainActivity extends AppCompatActivity {
                                 "[C]Dine In\n" +
                                 "[C]--------------------------------\n" +
                                 item
+        );
+    }
+
+    public AsyncEscPosPrinter getAsyncPrintShiftOrder(DeviceConnection printerConnection,
+                                                      PattyCash pattyCash,
+                                                      int soldProduct,
+                                                      int soldModifier,
+                                                      List<DataPayment> dataPayments,
+                                                      List<DataProductTransaction> listProductTransaction,
+                                                      List<DataModifierTransaction> listModifierTransaction,
+                                                      int rounding){
+        String userClose = pattyCash.getUser_ended() != null ? pattyCash.getUser_ended().getName() : "-";
+        String closeTime = pattyCash.getClose() != null ? pattyCash.getClose() : "-";
+
+        int totalAmount = 0;
+        int totalCash = 0;
+
+        String actualEndingCash = pattyCash.getAmount_akhir() != null ? formatRupiah(String.valueOf(pattyCash.getAmount_akhir()), "Rp. ") : "";
+
+        String paymentDetail = "";
+        int totalTransaction = 0;
+
+        for (DataPayment dataPayment : dataPayments){
+            paymentDetail += "[L]<b>"+ dataPayment.getName() + "PAYMENT" + "</b>\n";
+
+            if ("Cash".equals(dataPayment.getName())) {
+                for(Transactions transaction : dataPayment.getTransactions()){
+                    totalCash += Integer.parseInt(transaction.getTotal());
+                    totalTransaction += Integer.parseInt(transaction.getTotal());
+                }
+                paymentDetail += "[L]Cash Sales:[C]" + formatRupiah(String.valueOf(totalCash), "Rp. ") + "\n" +
+                "[C]--------------------------------\n";
+            }else{
+                int totalPayment = 0;
+                for(Payment payment : dataPayment.getPayment()){
+                    int total = 0;
+                    for(Transactions paymentTransaction : payment.getTransactions()){
+                            total += Integer.parseInt(paymentTransaction.getTotal());
+                            totalPayment += Integer.parseInt(paymentTransaction.getTotal());
+                    }
+                    paymentDetail += "[L]<b>" + payment.getName() + "</b>[C]" + formatRupiah(String.valueOf(total), "Rp. ") + "\n";
+                }
+                paymentDetail += "[L]<b>TOTAL AMOUNT</b>[C]" + formatRupiah(String.valueOf(totalPayment), "Rp. ") + "\n" +
+                "[C]--------------------------------\n";
+                totalTransaction += totalPayment;
+            }
+        }
+
+        int expectedEndingCash = totalCash + Integer.parseInt(pattyCash.getAmount_awal());
+
+        String cashDifference = !Objects.equals(actualEndingCash, "") ? String.valueOf(Integer.parseInt(actualEndingCash) - expectedEndingCash) : "";
+
+        String productItem = "";
+        for (DataProductTransaction dataProductTransaction : listProductTransaction){
+            if(Objects.equals(dataProductTransaction.getProduct().getName(), dataProductTransaction.getName())){
+                productItem += "[L]" + dataProductTransaction.getProduct().getName()+"\n" +
+                "[L]"+ dataProductTransaction.getTotal_transaction() +"[C]" + dataProductTransaction.getTotal_transaction_amount() + "\n";
+            }else{
+                productItem += "[L]" + dataProductTransaction.getProduct().getName() + " - " + dataProductTransaction.getName() +"\n" +
+                        "[L]"+ dataProductTransaction.getTotal_transaction() +"[C]" + dataProductTransaction.getTotal_transaction_amount() + "\n";
+            }
+            int totalHargaProduct = dataProductTransaction.getHarga() * dataProductTransaction.getTotal_transaction();
+            totalAmount += totalHargaProduct;
+        }
+
+        String modifierItem = "";
+        for(DataModifierTransaction dataModifierTransaction : listModifierTransaction){
+            modifierItem += "[L]" + dataModifierTransaction.getName()+"\n" +
+                    "[L]"+ dataModifierTransaction.getTotal_transaction() +"[C]" + dataModifierTransaction.getTotal_transaction_amount() + "\n";
+
+            int totalHargaModifier = dataModifierTransaction.getHarga() * dataModifierTransaction.getTotal_transaction();
+            totalAmount += totalHargaModifier;
+        }
+
+
+        AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+        return printer.addTextToPrint(
+                "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.logo_red, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
+                        "[L]\n" +
+                        "[C]" + pattyCash.getOutlet().getAddress() + "\n" +
+                        "[C]" + pattyCash.getOutlet().getPhone()+ "\n" +
+                        "[C]--------------------------------\n" +
+                        "[C]<font size='medium'>SHIFT PRINT</font>\n"+
+                        "[C]--------------------------------\n" +
+                        "[L]Open Name :[C]" + pattyCash.getUser_started().getName() + "\n" +
+                        "[L]Close Name :[C]" + userClose + "\n" +
+                        "[L]Start Date :[C]" + pattyCash.getOpen() + "\n" +
+                        "[L]End Date :[C]" + closeTime +"\n" +
+                        "[L]Sold Product :[C]" + soldProduct +"\n" +
+                        "[L]Sold Modifier :[C]" + soldModifier +"\n" +
+                        "[C]--------------------------------\n" +
+                        "[C]<font size='medium'>CASH MANAGEMENT</font>\n"+
+                        "[C]--------------------------------\n" +
+                        "[L]Starting Cash Drawer :[C]" + formatRupiah(String.valueOf(pattyCash.getAmount_awal()), "Rp. ") + "\n" +
+                        "[L]Cash Payment :[C]" + formatRupiah(String.valueOf(totalCash), "Rp. ") + "\n" +
+                        "[L]Expected Ending Cash :[C]" + formatRupiah(String.valueOf(expectedEndingCash), "Rp. ") + "\n" +
+                        "[L]Actual Ending Cash :[C]" + actualEndingCash +"\n" +
+                        "[L]Cash Difference :[C]" + formatRupiah(String.valueOf(cashDifference), "Rp. ") +"\n" +
+                        "[C]--------------------------------\n" +
+                        "[C]<font size='medium'>Order Details</font>\n"+
+                        "[C]--------------------------------\n" +
+                        "[L]<b>Sold Product</b>\n" +
+                        productItem +
+                        "\n" +
+                        "[L]<b>Sold Modifier</b>\n" +
+                        modifierItem +
+                        "\n" +
+                        "[L]Rounding :[C]" + formatRupiah(String.valueOf(rounding), "Rp. ") +"\n" +
+                        "[L]Total Amount :[C]" + formatRupiah(String.valueOf(totalAmount), "Rp. ") +"\n" +
+                        "[C]--------------------------------\n" +
+                        "[C]<font size='medium'>PAYMENT DETAILS</font>\n"+
+                        "[C]--------------------------------\n" +
+                        paymentDetail +
+                        "[L]<b>TOTAL TRANSACTION</b>[C]" + formatRupiah(String.valueOf(totalTransaction), "Rp. ") +"\n"
         );
     }
 
