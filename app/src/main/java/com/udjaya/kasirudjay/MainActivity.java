@@ -43,6 +43,7 @@ import com.udjaya.kasirudjay.model.ItemOpenBill;
 import com.udjaya.kasirudjay.model.LogRequest;
 import com.udjaya.kasirudjay.model.ModifierOpenBill;
 import com.udjaya.kasirudjay.model.OpenBill;
+import com.udjaya.kasirudjay.model.Outlet;
 import com.udjaya.kasirudjay.model.Tax;
 import com.udjaya.kasirudjay.model.TransactionItems;
 import com.udjaya.kasirudjay.model.Transactions;
@@ -59,8 +60,13 @@ import com.udjaya.kasirudjay.services.AsyncEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrinter;
 import com.udjaya.kasirudjay.utils.RClient;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -202,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (url.startsWith("intent://struk-history-print")){
                 String id = uri.getQueryParameter("id");
-                Log.d(TAG, "masok: " + id);
+                Log.d(TAG, "masok ga pak eko: " + id);
                 getDataStrukHistory(id);
                 return true;
             }
@@ -658,6 +664,30 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void printBluetoothCetakNotBill(DeviceConnection printerConnection, String namaOutlet, String nomorTelfonOutlet, String userCollect ,JSONArray listItem, JSONArray listPajak, int nominalDiskon, int nominalRounding) {
+        this.checkBluetoothPermissions(() -> {
+            try {
+                new AsyncBluetoothEscPosPrint(
+                        this,
+                        new AsyncEscPosPrint.OnPrintFinished() {
+                            @Override
+                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+                            }
+
+                            @Override
+                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+                            }
+                        }
+                ).execute(this.getAsyncEscPosPrinterCetakNotBill(selectedDevice, namaOutlet, nomorTelfonOutlet, userCollect ,listItem, listPajak, nominalDiskon, nominalRounding));
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+
     @SuppressLint("SimpleDateFormat")
     public AsyncEscPosPrinter getAsyncEscPosPrinter(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems) {
         String item = "";
@@ -814,8 +844,6 @@ public class MainActivity extends AppCompatActivity {
                         "[C]--------------------------------\n" +
                         "[C]<font size='big'>THIS IS COPY</font>\n"+
                         "[C]--------------------------------\n" +
-                        "[C]\n" +
-                        "[C]--------------------------------\n" +
                         "[C] *dine in* \n" +
                         item +
                         "[L]Subtotal :[C]" + formatRupiah(String.valueOf(subTotal), "Rp. ") + "\n" +
@@ -897,10 +925,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @SuppressLint("MissingPermission")
-    public AsyncEscPosPrinter getAsyncEscPosPrinterOrder(DeviceConnection printerConnection,
-                                                         Transactions transactions,
-                                                         List<TransactionItems> transactionItems,
-                                                         User user, String device){
+    public AsyncEscPosPrinter getAsyncEscPosPrinterOrder(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems, User user, String device){
         String item = "";
         String productIdBefore = "";
         String variantIdBefore = "";
@@ -959,14 +984,14 @@ public class MainActivity extends AppCompatActivity {
 
         AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
         return printer.addTextToPrint(
-                                "[C]<font >ADDITIONAL ORDER</font>\n" +
-                                "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
-                                "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
-                                "[L]" + user.getName() + "[C][R]" + device + "\n" +
-                                "[C]--------------------------------\n" +
-                                "[C]Dine In\n" +
-                                "[C]--------------------------------\n" +
-                                item
+                        "[C]<font >ADDITIONAL ORDER</font>\n" +
+                        "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
+                        "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
+                        "[L]" + user.getName() + "[C][R]" + device + "\n" +
+                        "[C]--------------------------------\n" +
+                        "[C]Dine In\n" +
+                        "[C]--------------------------------\n" +
+                        item
         );
     }
 
@@ -998,19 +1023,19 @@ public class MainActivity extends AppCompatActivity {
                     totalTransaction += Integer.parseInt(transaction.getTotal());
                 }
                 paymentDetail += "[L]Cash Sales:[C]" + formatRupiah(String.valueOf(totalCash), "Rp. ") + "\n" +
-                "[C]--------------------------------\n";
+                        "[C]--------------------------------\n";
             }else{
                 int totalPayment = 0;
                 for(Payment payment : dataPayment.getPayment()){
                     int total = 0;
                     for(Transactions paymentTransaction : payment.getTransactions()){
-                            total += Integer.parseInt(paymentTransaction.getTotal());
-                            totalPayment += Integer.parseInt(paymentTransaction.getTotal());
+                        total += Integer.parseInt(paymentTransaction.getTotal());
+                        totalPayment += Integer.parseInt(paymentTransaction.getTotal());
                     }
                     paymentDetail += "[L]<b>" + payment.getName() + "</b>[C]" + formatRupiah(String.valueOf(total), "Rp. ") + "\n";
                 }
                 paymentDetail += "[L]<b>TOTAL AMOUNT</b>[C]" + formatRupiah(String.valueOf(totalPayment), "Rp. ") + "\n" +
-                "[C]--------------------------------\n";
+                        "[C]--------------------------------\n";
                 totalTransaction += totalPayment;
             }
         }
@@ -1023,7 +1048,7 @@ public class MainActivity extends AppCompatActivity {
         for (DataProductTransaction dataProductTransaction : listProductTransaction){
             if(Objects.equals(dataProductTransaction.getProduct().getName(), dataProductTransaction.getName())){
                 productItem += "[L]" + dataProductTransaction.getProduct().getName()+"\n" +
-                "[L]"+ dataProductTransaction.getTotal_transaction() +"[C]" + dataProductTransaction.getTotal_transaction_amount() + "\n";
+                        "[L]"+ dataProductTransaction.getTotal_transaction() +"[C]" + dataProductTransaction.getTotal_transaction_amount() + "\n";
             }else{
                 productItem += "[L]" + dataProductTransaction.getProduct().getName() + " - " + dataProductTransaction.getName() +"\n" +
                         "[L]"+ dataProductTransaction.getTotal_transaction() +"[C]" + dataProductTransaction.getTotal_transaction_amount() + "\n";
@@ -1060,7 +1085,7 @@ public class MainActivity extends AppCompatActivity {
                         "[C]--------------------------------\n" +
                         "[C]<font size='medium'>CASH MANAGEMENT</font>\n"+
                         "[C]--------------------------------\n" +
-                        "[L]Starting Cash Drawer :[C]" + formatRupiah(String.valueOf(pattyCash.getAmount_awal()), "Rp. ") + "\n" +
+                        "[L]<font size='medium'>Starting Cash Drawer:</font>[C]" + formatRupiah(String.valueOf(pattyCash.getAmount_awal()), "Rp. ") + "\n" +
                         "[L]Cash Payment :[C]" + formatRupiah(String.valueOf(totalCash), "Rp. ") + "\n" +
                         "[L]Expected Ending Cash :[C]" + formatRupiah(String.valueOf(expectedEndingCash), "Rp. ") + "\n" +
                         "[L]Actual Ending Cash :[C]" + actualEndingCash +"\n" +
@@ -1084,6 +1109,108 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
+    @SuppressLint("SimpleDateFormat")
+    public AsyncEscPosPrinter getAsyncEscPosPrinterCetakNotBill(DeviceConnection printerConnection, String namaOutlet, String nomorTelfonOutlet, String userCollect ,JSONArray listItem, JSONArray listPajak, int nominalDiskon, int nominalRounding) throws JSONException {
+
+        String item = "";
+        String taxItem = "";
+        int totalPajak = 0;
+        int subTotal = 0;
+        int total = 0;
+
+        // Mengolah array item
+        for (int i = 0; i < listItem.length(); i++) {
+            JSONObject product = listItem.getJSONObject(i);
+            String namaProduct = product.getString("namaProduct");
+            String namaVariant = product.getString("namaVariant");
+            if(!namaProduct.equals("custom")){
+                if(Objects.equals(namaProduct, namaVariant)){
+                    item += "[L]<b>" + namaProduct +"</b>\n";
+                }else{
+                    item += "[L]<b>" + namaProduct + " - " + namaVariant +"</b>\n";
+                }
+            }else{
+                item += "[L]<b>" + "custom" +"</b>\n";
+            }
+            String qty = product.getString("quantity");
+
+            JSONArray modifiers = product.optJSONArray("modifier");
+            int totalHargaModifier = 0;
+            if (modifiers != null) {
+                for (int j = 0; j < modifiers.length(); j++) {
+                    JSONObject modifier = modifiers.getJSONObject(j);
+                    String namaModifier = modifier.getString("nama");
+                    int hargaModifier = modifier.getInt("harga");
+                    int resultHargaModifier = Integer.parseInt(qty) * hargaModifier;
+                    totalHargaModifier += resultHargaModifier;
+
+                    item +=  "[C]<b>" +namaModifier+"</b>[R]"+ formatRupiah(String.valueOf(resultHargaModifier), "Rp. ") +"\n";
+                }
+            }
+
+
+            int harga = product.getInt("harga");
+            int hargaTotal = Integer.parseInt(qty) * harga;
+            int resultHargaTotal = hargaTotal + totalHargaModifier;
+
+            total += resultHargaTotal;
+
+            item += "[L]<b>"+ qty + "x" + "</b>[C]<b>@" + harga +"</b>[R]"+ formatRupiah(String.valueOf(resultHargaTotal), "Rp. ") +"\n";
+
+        }
+
+//        Mengolah Array Pajak
+        for (int i = 0; i < listPajak.length(); i++) {
+            JSONObject pajak = listPajak.getJSONObject(i);
+            String namaPajak = pajak.getString("name");
+            int resultPajak = pajak.getInt("total");
+
+            taxItem += "[L]<b>"+ namaPajak + "(%)" + "</b>[R]<b>" + formatRupiah(String.valueOf(resultPajak), "Rp. ") +"</b>\n";
+            totalPajak += resultPajak;
+
+            total += totalPajak;
+        }
+
+
+        // Buat objek Date (misalnya, saat ini)
+        Date date = new Date();
+
+        // Buat instance SimpleDateFormat untuk format tanggal
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+        // Buat instance SimpleDateFormat untuk format waktu
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+
+        // Format tanggal dan waktu
+        String formattedDate = dateFormat.format(date);
+        String formattedTime = timeFormat.format(date);
+
+        total -= nominalDiskon;
+        total += nominalRounding;
+
+        SimpleDateFormat format = new SimpleDateFormat("'on' yyyy-MM-dd 'at' HH:mm:ss");
+        AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+        return printer.addTextToPrint(
+                "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.logo_red, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
+                        "[L]\n" +
+                        "[C]" + namaOutlet + "\n" +
+                        "[C]" + nomorTelfonOutlet+ "\n" +
+                        "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
+                        "[L]Collected By [C][R]" + userCollect + "\n" +
+                        "[C]--------------------------------\n" +
+                        "[C]<font size='medium'>THIS IS NOT BILL</font>\n"+
+                        "[C]--------------------------------\n" +
+                        "[C] *dine in* \n" +
+                        item +
+                        "[L]Subtotal :[C]" + formatRupiah(String.valueOf(subTotal), "Rp. ") + "\n" +
+                        "[L]Discount :[C]" + formatRupiah(String.valueOf(nominalDiskon), "Rp. ") + "\n" +
+                        "[L]Rounding :[C]" + formatRupiah(String.valueOf(nominalRounding), "Rp. ") +"\n" +
+                        taxItem +
+                        "[C]--------------------------------\n" +
+                        "[L]Total :[C]" + formatRupiah(String.valueOf(total), "Rp. ") + "\n"
+
+        );
+    }
     private class WebAppInterface {
         Context mContext;
 
@@ -1104,6 +1231,32 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void handlePrintOpenBill(String id){
             getOpenBillOrderStruk(id);
+        }
+
+        @JavascriptInterface
+        public void handleCetakBillNotReceipt(String jsonData){
+            try {
+                JSONObject jsonObject = new JSONObject(jsonData);
+                Log.d(TAG, "handleCetakBillNotReceipt: " + jsonObject);
+                JSONArray listItem = jsonObject.getJSONArray("listItem");
+                JSONObject outlet = jsonObject.getJSONObject("outlet");
+                JSONArray listPajak = jsonObject.getJSONArray("listPajak");
+                int nominalDiskon = jsonObject.getInt("nominalDiskon");
+                int nominalRounding = jsonObject.getInt("nominalRounding");
+
+
+                String namaOutlet = outlet.getString("name");
+                String telfon = outlet.getString("phone");
+
+                JSONObject userCollect = jsonObject.getJSONObject("userCollect");
+                String nameUserCollect = userCollect.getString("name");
+
+                printBluetoothCetakNotBill(selectedDevice, namaOutlet, telfon, nameUserCollect ,listItem, listPajak, nominalDiskon, nominalRounding);
+
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

@@ -7,6 +7,7 @@ public class Outlet {
     private String phone;
     private String created_at;
     private String updated_at;
+    private User user_started;
 
     public int getId() {
         return id;
@@ -54,5 +55,13 @@ public class Outlet {
 
     public void setUpdated_at(String updated_at) {
         this.updated_at = updated_at;
+    }
+
+    public User getUser_started() {
+        return user_started;
+    }
+
+    public void setUser_started(User user_started) {
+        this.user_started = user_started;
     }
 }
