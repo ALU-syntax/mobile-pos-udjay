@@ -4,7 +4,7 @@ public class Modifier {
     private int id;
     private String name;
     private int harga;
-    private int stok;
+    private String stok;
     private int modifiers_group_id;
     private String created_at;
     private String updated_at;
@@ -34,11 +34,11 @@ public class Modifier {
         this.harga = harga;
     }
 
-    public int getStok() {
+    public String getStok() {
         return stok;
     }
 
-    public void setStok(int stok) {
+    public void setStok(String stok) {
         this.stok = stok;
     }
 

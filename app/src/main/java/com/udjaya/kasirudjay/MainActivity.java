@@ -183,6 +183,42 @@ public class MainActivity extends AppCompatActivity {
         return prefix == null ? rupiah : "Rp. " + rupiah;
     }
 
+    public float getAmount(String money) {
+        // Step 1: Remove all non-numeric characters except commas and dots
+        String cleanString = money.replaceAll("[^0-9\\.,]", "");
+
+        // Step 2: Remove all non-numeric characters
+        String onlyNumbersString = money.replaceAll("[^0-9]", "");
+
+        // Step 3: Calculate the number of thousand separators to be removed
+        int separatorsCountToBeErased = cleanString.length() - onlyNumbersString.length() - 1;
+
+        // Step 4: Remove all commas and dots, but keep only the last one if it exists
+        String stringWithCommaOrDot = removeOccurrences(cleanString, "[,\\.]", separatorsCountToBeErased);
+
+        // Step 5: Remove thousand separators (commas or dots that are followed by three or more digits)
+        String removedThousandSeparator = stringWithCommaOrDot.replaceAll("(\\.|,)(?=\\d{3,})", "");
+
+        // Step 6: Replace any remaining commas with dots to handle decimal points
+        String finalString = removedThousandSeparator.replace(',', '.');
+
+        // Step 7: Convert the final string to a float
+        return Float.parseFloat(finalString);
+    }
+
+    private static String removeOccurrences(String input, String regex, int limit) {
+        String result = input;
+        for (int i = 0; i < limit; i++) {
+            String temp = result.replaceFirst(regex, "");
+            if (temp.equals(result)) {
+                break; // No more occurrences to replace
+            }
+            result = temp;
+        }
+        return result;
+    }
+
+
     private class MainWebViewClient extends WebViewClient {
 
         @Override
@@ -984,7 +1020,7 @@ public class MainActivity extends AppCompatActivity {
 
         AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
         return printer.addTextToPrint(
-                        "[C]<font >ADDITIONAL ORDER</font>\n" +
+                "[C]<font >ADDITIONAL ORDER</font>\n" +
                         "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
                         "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
                         "[L]" + user.getName() + "[C][R]" + device + "\n" +
@@ -1015,7 +1051,7 @@ public class MainActivity extends AppCompatActivity {
         int totalTransaction = 0;
 
         for (DataPayment dataPayment : dataPayments){
-            paymentDetail += "[L]<b>"+ dataPayment.getName() + "PAYMENT" + "</b>\n";
+            paymentDetail += "[L]<b>"+ dataPayment.getName() + " PAYMENT" + "</b>\n";
 
             if ("Cash".equals(dataPayment.getName())) {
                 for(Transactions transaction : dataPayment.getTransactions()){
@@ -1042,7 +1078,11 @@ public class MainActivity extends AppCompatActivity {
 
         int expectedEndingCash = totalCash + Integer.parseInt(pattyCash.getAmount_awal());
 
-        String cashDifference = !Objects.equals(actualEndingCash, "") ? String.valueOf(Integer.parseInt(actualEndingCash) - expectedEndingCash) : "";
+        int convertActualEndingCash = Objects.equals(actualEndingCash, "") ? 0 : Math.round(getAmount(actualEndingCash));
+
+        int calculateCashDifference = convertActualEndingCash - expectedEndingCash;
+        Log.d(TAG, "getAsyncPrintShiftOrder: " + calculateCashDifference);
+        String cashDifference = !Objects.equals(actualEndingCash, "") ? formatRupiah(String.valueOf(calculateCashDifference), "Rp. ") : "";
 
         String productItem = "";
         for (DataProductTransaction dataProductTransaction : listProductTransaction){
@@ -1089,7 +1129,7 @@ public class MainActivity extends AppCompatActivity {
                         "[L]Cash Payment :[C]" + formatRupiah(String.valueOf(totalCash), "Rp. ") + "\n" +
                         "[L]Expected Ending Cash :[C]" + formatRupiah(String.valueOf(expectedEndingCash), "Rp. ") + "\n" +
                         "[L]Actual Ending Cash :[C]" + actualEndingCash +"\n" +
-                        "[L]Cash Difference :[C]" + formatRupiah(String.valueOf(cashDifference), "Rp. ") +"\n" +
+                        "[L]Cash Difference :[C]" + cashDifference +"\n" +
                         "[C]--------------------------------\n" +
                         "[C]<font size='medium'>Order Details</font>\n"+
                         "[C]--------------------------------\n" +
