@@ -18,6 +18,8 @@ public class TransactionItems {
     private Product product;
     private List<String> modifier;
     private Variant variant;
+    private String total_count;
+    private String total_transaction;
 
     public Variant getVariant() {
         return variant;
@@ -137,5 +139,21 @@ public class TransactionItems {
 
     public void setReward_item(String reward_item) {
         this.reward_item = reward_item;
+    }
+
+    public String getTotal_count() {
+        return total_count;
+    }
+
+    public void setTotal_count(String total_count) {
+        this.total_count = total_count;
+    }
+
+    public String getTotal_transaction() {
+        return total_transaction;
+    }
+
+    public void setTotal_transaction(String total_transaction) {
+        this.total_transaction = total_transaction;
     }
 }

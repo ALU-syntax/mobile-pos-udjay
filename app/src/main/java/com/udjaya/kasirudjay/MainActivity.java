@@ -742,12 +742,18 @@ public class MainActivity extends AppCompatActivity {
             }
 
             for(String namaModifier: data.getModifier()){
-                item +=  "[C]<b>" +namaModifier+"</b>\n";
+                item +=  "[L]<b>" +namaModifier+"</b>\n";
             }
             if(data.getVariant() != null){
-                item += "[L]<b>"+ 1 + "x" + "</b>[C]<b>@" +data.getVariant().getHarga()+"</b>\n";
-                subTotal += data.getVariant().getHarga();
+                item += "[L]<b>"+ data.getTotal_count() + "x" + "</b>[C]<b>@" +data.getTotal_transaction()+"</b>\n";
+                subTotal += Integer.parseInt(data.getTotal_transaction());
             }
+
+            if(data.getCatatan() != null && !Objects.equals(data.getCatatan(), "")){
+                item += "[L]" +data.getCatatan()+"\n";
+            }
+
+            Log.d(TAG, "getAsyncEscPosPrinter: " + data.getCatatan());
 
             item += "[C]--------------------------------\n";
         }
@@ -963,37 +969,14 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("MissingPermission")
     public AsyncEscPosPrinter getAsyncEscPosPrinterOrder(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems, User user, String device){
         String item = "";
-        String productIdBefore = "";
-        String variantIdBefore = "";
-        String catatanBefore = "";
-        List<String> modifierBefore = Arrays.asList("");;
-        int quantityProduct = 1;
+        String deviceBrand = Build.BRAND;
 
         for (TransactionItems data : transactionItems){
-            // Memeriksa apakah kedua list sama persis
-            boolean areEqual = modifierBefore.equals(data.getModifier());
-            modifierBefore = data.getModifier();
-
-            // pengecekan untuk menghitung quantity
-            if(Objects.equals(productIdBefore, data.getProduct_id()) && Objects.equals(variantIdBefore, data.getVariant_id()) && Objects.equals(catatanBefore, data.getCatatan())){
-                if(areEqual){
-                    quantityProduct += 1;
-                }else{
-                    quantityProduct = 1;
-                }
-            }else{
-                quantityProduct = 1;
-            }
-
-            productIdBefore = data.getProduct_id();
-            variantIdBefore = data.getVariant_id();
-            catatanBefore = data.getCatatan();
-
             if(data.getProduct() != null){
                 if(Objects.equals(data.getProduct().getName(), data.getVariant().getName())){
-                    item += "[L]<b>"+ 1 + "x " + data.getProduct().getName() + "</b>[C] \n";
+                    item += "[L]<b>"+ data.getTotal_count() + "x " + data.getProduct().getName() + "</b>[C] \n";
                 }else{
-                    item += "[L]<b>"+ 1 + "x " + data.getProduct().getName() + "-" +data.getVariant().getName() + "</b>[C] \n";
+                    item += "[L]<b>"+ data.getTotal_count() + "x " + data.getProduct().getName() + " - " +data.getVariant().getName() + "</b>[C] \n";
                 }
 
             }else{
@@ -1002,6 +985,9 @@ public class MainActivity extends AppCompatActivity {
 
             for(String namaModifier: data.getModifier()){
                 item +=  "[L]" +namaModifier+"\n";
+            }
+            if(data.getCatatan() != null && !Objects.equals(data.getCatatan(), "")){
+                item += "[L]" +data.getCatatan()+"\n";
             }
         }
 
@@ -1023,7 +1009,7 @@ public class MainActivity extends AppCompatActivity {
                 "[C]<font >ADDITIONAL ORDER</font>\n" +
                         "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
                         "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
-                        "[L]" + user.getName() + "[C][R]" + device + "\n" +
+                        "[L]" + user.getName() + "[C][R]" + deviceBrand + "\n" +
                         "[C]--------------------------------\n" +
                         "[C]Dine In\n" +
                         "[C]--------------------------------\n" +
