@@ -787,6 +787,12 @@ public class MainActivity extends AppCompatActivity {
 
         int resultTotal = Integer.parseInt(transactions.getTotal());
 
+        String catatanNota = "";
+
+        if(transactions.getOutlet().getCatatan_nota() != null){
+            catatanNota += transactions.getOutlet().getCatatan_nota();
+            catatanNota += "\n";
+        }
         SimpleDateFormat format = new SimpleDateFormat("'on' yyyy-MM-dd 'at' HH:mm:ss");
         AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
         return printer.addTextToPrint(
@@ -812,6 +818,7 @@ public class MainActivity extends AppCompatActivity {
                         "[C]--------------------------------\n" +
                         "[L]Instagram: ud.djaya[C][R] \n" +
                         "\n" +
+                        catatanNota +
                         "[C]--------------------------------\n" +
                         "[C]<font size='small'>TERIMA KASIH</font>\n"
         );

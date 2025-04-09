@@ -8,6 +8,7 @@ public class Outlet {
     private String created_at;
     private String updated_at;
     private User user_started;
+    private String catatan_nota;
 
     public int getId() {
         return id;
@@ -63,5 +64,13 @@ public class Outlet {
 
     public void setUser_started(User user_started) {
         this.user_started = user_started;
+    }
+
+    public String getCatatan_nota() {
+        return catatan_nota;
+    }
+
+    public void setCatatan_nota(String catatan_nota) {
+        this.catatan_nota = catatan_nota;
     }
 }
