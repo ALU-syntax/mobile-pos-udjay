@@ -765,7 +765,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         for(Tax tax : transactions.getTax()){
-            int valueTax = (Integer.parseInt(tax.getAmount()) * subTotal) / 100;
+            int valueTax = (Integer.parseInt(tax.getAmount()) * (subTotal - Integer.parseInt(transactions.getTotal_diskon()))) / 100;
             taxItem += "[L]<b>"+ tax.getName() + "(" + tax.getAmount() + tax.getSatuan() + ")" + "</b>[R]<b>" + formatRupiah(String.valueOf(valueTax), "Rp. ") +"</b>\n";
             totalPajak += valueTax;
         }
