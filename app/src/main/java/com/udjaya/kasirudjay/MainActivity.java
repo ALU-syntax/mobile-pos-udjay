@@ -744,10 +744,16 @@ public class MainActivity extends AppCompatActivity {
             for(String namaModifier: data.getModifier()){
                 item +=  "[L]<b>" +namaModifier+"</b>\n";
             }
-            if(data.getVariant() != null){
-                item += "[L]<b>"+ data.getTotal_count() + "x" + "</b>[C]<b>@" +data.getTotal_transaction()+"</b>\n";
-                subTotal += Integer.parseInt(data.getTotal_transaction());
-            }
+
+            item += "[L]<b>"+ data.getTotal_count() + "x" + "</b>[C]<b>@" +data.getTotal_transaction()+"</b>\n";
+            subTotal += Integer.parseInt(data.getTotal_transaction());
+//            if(data.getVariant() != null){
+//                item += "[L]<b>"+ data.getTotal_count() + "x" + "</b>[C]<b>@" +data.getTotal_transaction()+"</b>\n";
+//                subTotal += Integer.parseInt(data.getTotal_transaction());
+//            }else{
+//                item += "[L]<b>"+ data.getTotal_count() + "x" + "</b>[C]<b>@" +data.getTotal_transaction()+"</b>\n";
+//                subTotal += Integer.parseInt(data.getTotal_transaction());
+//            }
 
             if(data.getCatatan() != null && !Objects.equals(data.getCatatan(), "")){
                 item += "[L]" +data.getCatatan()+"\n";
@@ -933,6 +939,10 @@ public class MainActivity extends AppCompatActivity {
 
                     for(ModifierOpenBill modifierOpenBill: itemOpenBill.getModifier()){
                         item +=  "[L]" +modifierOpenBill.getName()+"\n";
+                    }
+
+                    if(itemOpenBill.getCatatan() != null && !Objects.equals(itemOpenBill.getCatatan(), "")){
+                        item += "[L]" +itemOpenBill.getCatatan()+"\n";
                     }
                 }
 
