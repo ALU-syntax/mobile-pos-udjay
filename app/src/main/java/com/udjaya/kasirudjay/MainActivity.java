@@ -848,11 +848,19 @@ public class MainActivity extends AppCompatActivity {
             }
 
             for(String namaModifier: data.getModifier()){
-                item +=  "[C]<b>" +namaModifier+"</b>\n";
+                item +=  "[L]<b>" +namaModifier+"</b>\n";
             }
-            if(data.getVariant() != null){
-                item += "[L]<b>"+ 1 + "x" + "</b>[C]<b>@" +data.getVariant().getHarga()+"</b>\n";
-                subTotal += data.getVariant().getHarga();
+
+            item += "[L]<b>"+ data.getTotal_count() + "x" + "</b>[C]<b>@" +data.getTotal_transaction()+"</b>\n";
+            subTotal += Integer.parseInt(data.getTotal_transaction());
+
+//            if(data.getVariant() != null){
+//                item += "[L]<b>"+ 1 + "x" + "</b>[C]<b>@" +data.getVariant().getHarga()+"</b>\n";
+//                subTotal += data.getVariant().getHarga();
+//            }
+
+            if(data.getCatatan() != null && !Objects.equals(data.getCatatan(), "")){
+                item += "[L]" +data.getCatatan()+"\n";
             }
 
             item += "[C]--------------------------------\n";
@@ -887,6 +895,13 @@ public class MainActivity extends AppCompatActivity {
 
         int resultTotal = Integer.parseInt(transactions.getTotal());
 
+        String catatanNota = "";
+
+        if(transactions.getOutlet().getCatatan_nota() != null){
+            catatanNota += transactions.getOutlet().getCatatan_nota();
+            catatanNota += "\n";
+        }
+
         SimpleDateFormat format = new SimpleDateFormat("'on' yyyy-MM-dd 'at' HH:mm:ss");
         AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
         return printer.addTextToPrint(
@@ -914,6 +929,7 @@ public class MainActivity extends AppCompatActivity {
                         "[C]--------------------------------\n" +
                         "[L]Instagram: ud.djaya[C][R] \n" +
                         "\n" +
+                        catatanNota +
                         "[C]--------------------------------\n" +
                         "[C]<font size='small'>TERIMA KASIH</font>\n"
         );
