@@ -6,6 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class RClient {
     private static Retrofit retrofit;
     private static  String BASE_URL = "https://udjaya.neidra.my.id";
+//    private static  String BASE_URL = "https://backoffice.uddjaya.com";
 
 
     public static Retrofit getRetrofitInstance() {

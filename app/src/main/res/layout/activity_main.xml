@@ -1,15 +1,209 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <WebView
-        android:id="@+id/webview"
+    <androidx.drawerlayout.widget.DrawerLayout
+        android:id="@+id/drawer_layout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- Konten utama: WebView -->
+        <WebView
+            android:id="@+id/webview"
+            android:layout_marginTop="5dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="25dp"/>
+
+        <!-- Sidebar drawer di kiri -->
+        <LinearLayout
+            android:id="@+id/feedback_form"
+            android:layout_width="280dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="start"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="#FFFFFF"
+            android:clipToPadding="false">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Setting Printer"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="10dp"
+                android:textColor="#212121"
+                android:paddingBottom="12dp" />
+
+            <!-- Input IP Address -->
+            <EditText
+                android:id="@+id/input_ip_address"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Masukkan nomor IP"
+                android:inputType="phone"
+                android:background="@drawable/edit_text_background"
+                android:paddingHorizontal="12dp"
+                android:textColor="#000"
+                android:textSize="16sp"
+                android:layout_marginBottom="12dp" />
+
+            <EditText
+                android:id="@+id/input_port_address"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Masukkan nomor Port"
+                android:inputType="phone"
+                android:background="@drawable/edit_text_background"
+                android:paddingHorizontal="12dp"
+                android:textColor="#000"
+                android:textSize="16sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Button Test Printer Wifi -->
+            <Button
+                android:id="@+id/btn_test_printer_wifi"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Test Printer Wifi"
+                android:textAllCaps="false"
+                android:backgroundTint="#2979FF"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Spinner untuk daftar printer Bluetooth -->
+<!--            <Spinner-->
+<!--                android:id="@+id/spinner_bluetooth_printer"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="48dp"-->
+<!--                android:background="@drawable/spinner_background"-->
+<!--                android:layout_marginBottom="12dp" />-->
+
+            <!-- Button Test Printer Bluetooth -->
+            <Button
+                android:id="@+id/btn_test_printer_bluetooth"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Setting Printer"
+                android:textAllCaps="false"
+                android:backgroundTint="#2979FF"
+                android:textColor="#FFFFFF" />
+            
+            <TextView
+                android:id="@+id/txt_current_zoom"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:layout_gravity="center"
+                android:text="Zoom Layar"/>
+
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/et_current_zoom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:background="@drawable/background_outline"
+                android:textSize="24sp"/>
+            
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_zoom_out"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_margin="10dp"
+                    android:background="@drawable/background_button"
+                    android:textColor="@color/white"
+                    android:text="-"/>
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_zoom_in"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_margin="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/background_button"
+                    android:textColor="@color/white"
+                    android:text="+"/>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_zoom_out_10"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/background_button"
+                    android:layout_margin="10dp"
+                    android:textColor="@color/white"
+                    android:text="-10"/>
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_zoom_in_10"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_margin="10dp"
+                    android:background="@drawable/background_button"
+                    android:textColor="@color/white"
+                    android:text="+10"/>
+
+            </LinearLayout>
+
+            <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Simpan"
+                android:layout_marginBottom="20dp"
+                android:backgroundTint="#19e619"/>
+
+        </LinearLayout>
+
+    </androidx.drawerlayout.widget.DrawerLayout>
+
+    <!-- Tombol khusus di kiri tengah menempel di pinggir layar -->
+    <!--    <Button-->
+    <!--        android:id="@+id/btn_toggle_sidebar"-->
+    <!--        android:layout_width="48dp"-->
+    <!--        android:layout_height="48dp"-->
+    <!--        android:text="≡"-->
+    <!--        android:textSize="24sp"-->
+    <!--        android:background="@android:color/holo_blue_dark"-->
+    <!--        android:textColor="@android:color/white"-->
+    <!--        android:layout_gravity="start|center_vertical"-->
+    <!--        android:layout_marginStart="0dp" />-->
+
+    <ImageButton
+        android:id="@+id/btn_toggle_sidebar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="start|center_vertical"
+        android:background="@drawable/circle_background"
+        android:padding="12dp"
+        android:elevation="6dp"
+        android:src="@drawable/ic_settings"
+        android:contentDescription="Toggle Sidebar" />
+
+</FrameLayout>

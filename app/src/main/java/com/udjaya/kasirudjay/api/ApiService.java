@@ -1,9 +1,13 @@
 package com.udjaya.kasirudjay.api;
 
+import com.udjaya.kasirudjay.model.Category;
+import com.udjaya.kasirudjay.model.GetCategory;
 import com.udjaya.kasirudjay.model.GetOpenBillStruk;
 import com.udjaya.kasirudjay.model.shiftorder.GetShiftOrderStruk;
 import com.udjaya.kasirudjay.model.GetStruk;
 import com.udjaya.kasirudjay.model.LogRequest;
+
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -23,4 +27,7 @@ public interface ApiService {
 
     @GET("api-print-shift-detail/{petty_cash_id}")
     Call<GetShiftOrderStruk> getShiftOrderStruk(@Path("petty_cash_id") String id);
+
+    @GET("get-all-category")
+    Call<GetCategory> getAllCategory();
 }

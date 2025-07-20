@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- warna background -->
+    <solid android:color="#c83d3b"/>
+
+    <!-- radius untuk sudut membulat -->
+    <corners android:radius="16dp"/>
+
+    <!-- border -->
+    <stroke
+        android:width="2dp"
+        android:color="#444444"/>
+
+    <!-- optional padding di dalam shape -->
+    <padding
+        android:left="8dp"
+        android:top="8dp"
+        android:right="8dp"
+        android:bottom="8dp" />
+</shape>

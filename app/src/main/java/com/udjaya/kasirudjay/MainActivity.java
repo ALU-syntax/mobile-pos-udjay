@@ -13,27 +13,36 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresPermission;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatButton;
+import androidx.appcompat.widget.AppCompatEditText;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.dantsu.escposprinter.connection.DeviceConnection;
 import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection;
 import com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections;
+import com.dantsu.escposprinter.connection.tcp.TcpConnection;
 import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
 import com.udjaya.kasirudjay.api.ApiService;
 import com.udjaya.kasirudjay.model.DeviceInfo;
@@ -43,22 +52,26 @@ import com.udjaya.kasirudjay.model.ItemOpenBill;
 import com.udjaya.kasirudjay.model.LogRequest;
 import com.udjaya.kasirudjay.model.ModifierOpenBill;
 import com.udjaya.kasirudjay.model.OpenBill;
-import com.udjaya.kasirudjay.model.Outlet;
 import com.udjaya.kasirudjay.model.Tax;
 import com.udjaya.kasirudjay.model.TransactionItems;
 import com.udjaya.kasirudjay.model.Transactions;
 import com.udjaya.kasirudjay.model.User;
 import com.udjaya.kasirudjay.model.UserInfo;
+import com.udjaya.kasirudjay.model.printer.Printer;
+import com.udjaya.kasirudjay.model.printer.PrinterDao;
 import com.udjaya.kasirudjay.model.shiftorder.DataModifierTransaction;
 import com.udjaya.kasirudjay.model.shiftorder.DataPayment;
 import com.udjaya.kasirudjay.model.shiftorder.DataProductTransaction;
 import com.udjaya.kasirudjay.model.shiftorder.GetShiftOrderStruk;
 import com.udjaya.kasirudjay.model.shiftorder.PattyCash;
 import com.udjaya.kasirudjay.model.shiftorder.Payment;
+import com.udjaya.kasirudjay.modul.setting.SettingActivity;
 import com.udjaya.kasirudjay.services.AsyncBluetoothEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrinter;
+import com.udjaya.kasirudjay.services.AsyncTcpEscPosPrint;
 import com.udjaya.kasirudjay.utils.RClient;
+import com.udjaya.kasirudjay.utils.SharedPrefManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -83,10 +96,27 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private ApiService apiService;
     private Retrofit retrofit;
+    private DrawerLayout drawerLayout;
+    private EditText inputIP;
+    private EditText inputPort;
+    private Button btnTestPrinterWifi;
+    private Button btnTestPrinterBluettoth;
+    private Button btnSave;
+    private AppCompatButton btnZoomIn, btnZoomOut, btnZoomIn10, btnZoomOut10;
+    private TextView txtCurrentZoom;
+    private AppCompatEditText etCurrentZoom;
+
 
     private BluetoothConnection selectedDevice;
     public BluetoothConnection[] bluetoothDevicesList;
+    SharedPrefManager prefManager;
 
+    AppDatabase db;
+
+    String ip;
+    int port;
+
+    private int currentZoom = 250; // 100% skala normal
 
     private static final String TAG = "MainActivity";
 
@@ -95,14 +125,81 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+
+        prefManager = SharedPrefManager.getInstance(this);
+
+        prefManager.saveIp("192.168.1.100");
+        prefManager.savePort(8080);
+
+        ip = prefManager.getIp();
+        port = prefManager.getPort();
+
+        drawerLayout = findViewById(R.id.drawer_layout);
+        inputIP = findViewById(R.id.input_ip_address);
+        inputPort = findViewById(R.id.input_port_address);
+        btnTestPrinterBluettoth = findViewById(R.id.btn_test_printer_bluetooth);
+        btnTestPrinterWifi = findViewById(R.id.btn_test_printer_wifi);
+        btnSave = findViewById(R.id.btnSave);
+        btnZoomIn = findViewById(R.id.btn_zoom_in);
+        btnZoomOut = findViewById(R.id.btn_zoom_out);
+        btnZoomIn10 = findViewById(R.id.btn_zoom_in_10);
+        btnZoomOut10 = findViewById(R.id.btn_zoom_out_10);
+        txtCurrentZoom = findViewById(R.id.txt_current_zoom);
+        etCurrentZoom = findViewById(R.id.et_current_zoom);
+//        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.drawer_layout), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
+        etCurrentZoom.setText(String.valueOf(currentZoom));
+
         requestBluetoothPermissions(this);
         checkBluetoothStatus();
+        db = AppDatabase.getInstance(this);
+
+        ImageButton btnToggleSidebar = findViewById(R.id.btn_toggle_sidebar);
+
+        btnToggleSidebar.setOnClickListener(v -> {
+            if (drawerLayout.isDrawerOpen(Gravity.START)) {
+                drawerLayout.closeDrawer(Gravity.START);
+            } else {
+                drawerLayout.openDrawer(Gravity.START);
+
+                // Ambil data IP dan Port dari SharedPreferences
+                String savedIp = prefManager.getIp();
+                int savedPort = prefManager.getPort();
+
+                // Set data ke EditText input IP dan Port
+                inputIP.setText(savedIp);
+                inputPort.setText(String.valueOf(savedPort));
+            }
+        });
+
+        btnSave.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                prefManager.saveIp(inputIP.getText().toString());
+                prefManager.savePort(Integer.parseInt(inputPort.getText().toString()));
+            }
+        });
+
+        btnTestPrinterWifi.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getDataStruk("5100", false);
+//                printBluetooth();
+            }
+        });
+
+        btnTestPrinterBluettoth.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(MainActivity.this, SettingActivity.class);
+                startActivity(i);
+            }
+        });
 
         bluetoothDevicesList = (new BluetoothPrintersConnections()).getList();
         if(bluetoothDevicesList != null){
@@ -111,12 +208,65 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        btnZoomIn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (currentZoom < 500) { // batas maksimal zoom (500%)
+                    currentZoom += 1;
+                    setCustomZoom(currentZoom);
+                    etCurrentZoom.setText(String.valueOf(currentZoom));
+                }
+                Log.d(TAG, String.valueOf(currentZoom));
+            }
+        });
+
+        btnZoomOut.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (currentZoom > -100) { // batas minimal zoom 50% (bisa diatur sesuai kebutuhan)
+                    currentZoom -= 1;
+                    setCustomZoom(currentZoom);
+                    etCurrentZoom.setText(String.valueOf(currentZoom));
+                }
+                Log.d(TAG, String.valueOf(currentZoom));
+            }
+        });
+
+        btnZoomIn10.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (currentZoom < 500) { // batas maksimal zoom (500%)
+                    currentZoom += 10;
+                    setCustomZoom(currentZoom);
+                    etCurrentZoom.setText(String.valueOf(currentZoom));
+                }
+                Log.d(TAG, String.valueOf(currentZoom));
+            }
+        });
+
+        btnZoomOut10.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (currentZoom > -100) { // batas minimal zoom 50% (bisa diatur sesuai kebutuhan)
+                    currentZoom -= 10;
+                    setCustomZoom(currentZoom);
+                    etCurrentZoom.setText(String.valueOf(currentZoom));
+                }
+                Log.d(TAG, String.valueOf(currentZoom));
+            }
+        });
+
         retrofit = RClient.getRetrofitInstance();
         apiService = retrofit.create(ApiService.class);
 
         webView = findViewById(R.id.webview);
         WebSettings webSettings = webView.getSettings();
+
+        webSettings.setBuiltInZoomControls(false);
+        webSettings.setSupportZoom(false);
+
         webSettings.setJavaScriptEnabled(true);
+
 
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
 
@@ -124,6 +274,9 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(viewClient);
 
         webView.loadUrl("https://udjaya.neidra.my.id/kasir");
+//        webView.loadUrl("https://backoffice.uddjaya.com/kasir");
+
+        setCustomZoom(currentZoom);
     }
 
     private void logErrorToApi(Exception e, OpenBill data) {
@@ -151,6 +304,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    private void setCustomZoom(int zoomPercent) {
+        currentZoom = zoomPercent;
+        webView.setInitialScale(currentZoom); // nilai dalam persen
+    }
+
 
     public static String formatRupiah(String angka, String prefix) {
         // Remove all non-digit and non-comma characters
@@ -637,23 +796,115 @@ public class MainActivity extends AppCompatActivity {
                         }
                 ).execute(this.getAsyncEscPosPrinterOrder(selectedDevice, transactions, transactionItems, user, device));
             });
-        }else{
-            this.checkBluetoothPermissions(() -> {
-                new AsyncBluetoothEscPosPrint(
-                        this,
-                        new AsyncEscPosPrint.OnPrintFinished() {
-                            @Override
-                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
-                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
-                            }
 
-                            @Override
-                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
-                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
-                            }
-                        }
-                ).execute(this.getAsyncEscPosPrinter(selectedDevice, transactions, transactionItems));
-            });
+            printUsingFirstPrinter(transactions, transactionItems, user, device);
+
+//            printTcp();
+//            try {
+//
+//                ip = prefManager.getIp();
+//                port = prefManager.getPort();
+//
+////                Log.d(TAG, ip);
+////                Log.d(TAG, String.valueOf(port));
+//
+//                new AsyncTcpEscPosPrint(
+//                        this,
+//                        new AsyncEscPosPrint.OnPrintFinished() {
+//                            @Override
+//                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+//                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+//                                Log.e("Async.OnPrintFinished", String.valueOf(codeException));
+//                                Log.e("Async.OnPrintFinished", Arrays.toString(asyncEscPosPrinter.getTextsToPrint()));
+//                            }
+//
+//                            @Override
+//                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+//                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+//                            }
+//                        }
+//                )
+//                        .execute(
+//                                this.getAsyncEscPosPrinterOrder(
+//                                        new TcpConnection(
+//                                                ip,
+//                                                port,
+//                                                30000
+//                                        ),  transactions, transactionItems, user, device
+//                                )
+////                                getAsyncEscPosPrinterTest(new TcpConnection(ip, port, 300000))
+//                        );
+//            } catch (NumberFormatException e) {
+//                new AlertDialog.Builder(this)
+//                        .setTitle("Invalid TCP port address")
+//                        .setMessage("Port field must be an integer.")
+//                        .show();
+//                e.printStackTrace();
+//            }
+//        }else{
+//            this.checkBluetoothPermissions(() -> {
+//                new AsyncBluetoothEscPosPrint(
+//                        this,
+//                        new AsyncEscPosPrint.OnPrintFinished() {
+//                            @Override
+//                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+//                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+//                            }
+//
+//                            @Override
+//                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+//                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+//                            }
+//                        }
+//                ).execute(this.getAsyncEscPosPrinter(selectedDevice, transactions, transactionItems));
+//            });
+//
+//            try {
+//
+//                ip = prefManager.getIp();
+//                port = prefManager.getPort();
+//
+////                Log.d(TAG, ip);
+////                Log.d(TAG, String.valueOf(port));
+//
+//                new AsyncTcpEscPosPrint(
+//                        this,
+//                        new AsyncEscPosPrint.OnPrintFinished() {
+//                            @Override
+//                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+//                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+//                                Log.e("Async.OnPrintFinished", String.valueOf(codeException));
+//                                Log.e("Async.OnPrintFinished", Arrays.toString(asyncEscPosPrinter.getTextsToPrint()));
+//                            }
+//
+//                            @Override
+//                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+//                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+//                            }
+//                        }
+//                )
+//                        .execute(
+//                                this.getAsyncEscPosPrinter(new TcpConnection(
+//                                        ip,
+//                                        port,
+//                                        30000
+//                                ), transactions, transactionItems)
+////                                this.getAsyncEscPosPrinterOrder(
+////                                        new TcpConnection(
+////                                                ip,
+////                                                port,
+////                                                30000
+////                                        ),  transactions, transactionItems, user, device
+////                                )
+////                                getAsyncEscPosPrinterTest(new TcpConnection(ip, port, 300000))
+//                        );
+//            } catch (NumberFormatException e) {
+//                new AlertDialog.Builder(this)
+//                        .setTitle("Invalid TCP port address")
+//                        .setMessage("Port field must be an integer.")
+//                        .show();
+//                e.printStackTrace();
+//            }
         }
     }
 
@@ -904,6 +1155,9 @@ public class MainActivity extends AppCompatActivity {
 
         SimpleDateFormat format = new SimpleDateFormat("'on' yyyy-MM-dd 'at' HH:mm:ss");
         AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+//        Default paper width biasanya bawaan dari hardware printer (misal 58mm, 72mm, 80mm).
+//        Printer 58mm → 32 karakter per baris (default umum)
+//        Printer 80mm → 48 karakter per baris
         return printer.addTextToPrint(
                 "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.logo_red, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
                         "[L]\n" +
@@ -1270,6 +1524,78 @@ public class MainActivity extends AppCompatActivity {
 
         );
     }
+
+//    public void printTcp() {
+//        try {
+//            new AsyncTcpEscPosPrint(
+//                    this,
+//                    new AsyncEscPosPrint.OnPrintFinished() {
+//                        @Override
+//                        public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+//                            Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+//                        }
+//
+//                        @Override
+//                        public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+//                            Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+//                        }
+//                    }
+//            )
+//                    .execute(
+//                            this.getAsyncEscPosPrinterOrder(
+//                                    new TcpConnection(
+//                                            ip,
+//                                            port
+//                                    ),  transactions, transactionItems, user, device
+//                            )
+//                    );
+//        } catch (NumberFormatException e) {
+//            new AlertDialog.Builder(this)
+//                    .setTitle("Invalid TCP port address")
+//                    .setMessage("Port field must be an integer.")
+//                    .show();
+//            e.printStackTrace();
+//        }
+//    }
+
+    @SuppressLint("SimpleDateFormat")
+    public AsyncEscPosPrinter getAsyncEscPosPrinterTest(DeviceConnection printerConnection) {
+        SimpleDateFormat format = new SimpleDateFormat("'on' yyyy-MM-dd 'at' HH:mm:ss");
+        AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+        return printer.addTextToPrint(
+                "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.logo_red, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
+                        "[L]\n" +
+                        "[C]<u><font size='big'>ORDER N°045</font></u>\n" +
+                        "[L]\n" +
+                        "[C]<u type='double'>" + format.format(new Date()) + "</u>\n" +
+                        "[C]\n" +
+                        "[C]================================\n" +
+                        "[L]\n" +
+                        "[L]<b>BEAUTIFUL SHIRT</b>[R]9.99€\n" +
+                        "[L]  + Size : S\n" +
+                        "[L]\n" +
+                        "[L]<b>AWESOME HAT</b>[R]24.99€\n" +
+                        "[L]  + Size : 57/58\n" +
+                        "[L]\n" +
+                        "[C]--------------------------------\n" +
+                        "[R]TOTAL PRICE :[R]34.98€\n" +
+                        "[R]TAX :[R]4.23€\n" +
+                        "[L]\n" +
+                        "[C]================================\n" +
+                        "[L]\n" +
+                        "[L]<u><font color='bg-black' size='tall'>Customer :</font></u>\n" +
+                        "[L]Raymond DUPONT\n" +
+                        "[L]5 rue des girafes\n" +
+                        "[L]31547 PERPETES\n" +
+                        "[L]Tel : +33801201456\n" +
+                        "\n" +
+                        "[C]<barcode type='ean13' height='10'>831254784551</barcode>\n" +
+                        "[L]\n" +
+                        "[C]<qrcode size='20'>https://dantsu.com/</qrcode>\n"
+        );
+    }
+
+
     private class WebAppInterface {
         Context mContext;
 
@@ -1290,6 +1616,12 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void handlePrintOpenBill(String id){
             getOpenBillOrderStruk(id);
+        }
+
+        @JavascriptInterface
+        public void handleMenuDetailSetting(){
+            Intent i = new Intent(MainActivity.this, SettingActivity.class);
+            startActivity(i);
         }
 
         @JavascriptInterface
@@ -1317,5 +1649,75 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void printUsingFirstPrinter(Transactions transactions, List<TransactionItems> transactionItems, User user, String device) {
+        PrinterDao printerDao = db.printerDao();
+
+        new Thread(() -> {
+            Printer firstPrinter = printerDao.getFirstPrinter();
+
+            List<TransactionItems> filterItem = filterTransactionItemsByPrinterCategory(transactionItems, firstPrinter);
+
+            Log.d("TestingPrinter", String.valueOf(filterItem.size()));
+            if (firstPrinter != null && filterItem.size() > 0) {
+                String ip = firstPrinter.getIp();
+                int port = firstPrinter.getPort();
+
+                runOnUiThread(() -> {
+                    try {
+                        new AsyncTcpEscPosPrint(
+                                this,
+                                new AsyncEscPosPrint.OnPrintFinished() {
+                                    @Override
+                                    public void onError(AsyncEscPosPrinter printer, int codeException) {
+                                        Log.e("Async.OnPrintFinished", "An error occurred! Code: " + codeException);
+                                    }
+
+                                    @Override
+                                    public void onSuccess(AsyncEscPosPrinter printer) {
+                                        Log.i("Async.OnPrintFinished", "Print finished successfully!");
+                                    }
+                                }
+                        ).execute(
+                                getAsyncEscPosPrinterOrder(
+                                        new TcpConnection(ip, port, 30000),
+                                        transactions, filterItem, user, device
+                                )
+                        );
+                    } catch (NumberFormatException e) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("Invalid TCP port address")
+                                .setMessage("Port field must be an integer.")
+                                .show();
+                        e.printStackTrace();
+                    }
+                });
+            } else {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "No printer data found", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+
+    // Fungsi filter transactionItems sesuai listCategory printer
+    public List<TransactionItems> filterTransactionItemsByPrinterCategory(List<TransactionItems> transactionItems, Printer printer) {
+        List<Integer> allowedCategories = printer.getListCategory();
+        if (allowedCategories == null || allowedCategories.isEmpty()) {
+            // Jika listCategory printer kosong, kembalikan semua item tanpa filter
+            return transactionItems;
+        }
+
+        List<TransactionItems> filteredList = new ArrayList<>();
+
+        for (TransactionItems item : transactionItems) {
+            Log.d("Check Category Item Transaksi", item.getProduct().getCategory_id());
+            if (item.getProduct() != null && allowedCategories.contains(Integer.parseInt(item.getProduct().getCategory_id()))) {
+                filteredList.add(item);
+            }
+        }
+
+        return filteredList;
     }
 }
