@@ -3,6 +3,7 @@ package com.udjaya.kasirudjay.api;
 import com.udjaya.kasirudjay.model.Category;
 import com.udjaya.kasirudjay.model.GetCategory;
 import com.udjaya.kasirudjay.model.GetOpenBillStruk;
+import com.udjaya.kasirudjay.model.notereceiptscheduler.GetActiveNoteReceiptScheduling;
 import com.udjaya.kasirudjay.model.shiftorder.GetShiftOrderStruk;
 import com.udjaya.kasirudjay.model.GetStruk;
 import com.udjaya.kasirudjay.model.LogRequest;
@@ -30,4 +31,7 @@ public interface ApiService {
 
     @GET("get-all-category")
     Call<GetCategory> getAllCategory();
+
+    @GET("getActiveNoteReceiptScheduling/{idOutlet}")
+    Call<GetActiveNoteReceiptScheduling> getActiveNoteReceiptScheduling(@Path("idOutlet")String id);
 }

@@ -1,5 +1,7 @@
 package com.udjaya.kasirudjay.model;
 
+import com.udjaya.kasirudjay.model.notereceiptscheduler.NoteReceiptScheduler;
+
 import java.util.List;
 
 public class GetStruk {
@@ -9,6 +11,7 @@ public class GetStruk {
     private User user;
     private String device;
     private boolean status;
+    private List<NoteReceiptScheduler> noteReceiptScheduler;
 
 
     public String getDevice() {
@@ -49,5 +52,13 @@ public class GetStruk {
 
     public void setTransactionItems(List<TransactionItems> transactionItems) {
         this.transactionItems = transactionItems;
+    }
+
+    public List<NoteReceiptScheduler> getNoteReceiptScheduler() {
+        return noteReceiptScheduler;
+    }
+
+    public void setNoteReceiptScheduler(List<NoteReceiptScheduler> noteReceiptScheduler) {
+        this.noteReceiptScheduler = noteReceiptScheduler;
     }
 }

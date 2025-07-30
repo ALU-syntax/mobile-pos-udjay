@@ -7,6 +7,7 @@ public class SharedPrefManager {
     private static final String PREFS_NAME = "MyAppPrefs";
     private static final String KEY_IP = "ip_address";
     private static final String KEY_PORT = "port_number";
+    private static final String KEY_ZOOM = "zoom_level";
 
     private SharedPreferences sharedPreferences;
     private static SharedPrefManager instance;
@@ -31,6 +32,16 @@ public class SharedPrefManager {
 
     public String getIp() {
         return sharedPreferences.getString(KEY_IP, "0.0.0.0");
+    }
+
+    public void saveZoom(int zoom){
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(KEY_ZOOM, zoom);
+        editor.apply();
+    }
+
+    public int getZoom(){
+        return sharedPreferences.getInt(KEY_ZOOM, 0);
     }
 
     public void savePort(int port) {

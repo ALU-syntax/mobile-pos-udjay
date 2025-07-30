@@ -57,6 +57,7 @@ import com.udjaya.kasirudjay.model.TransactionItems;
 import com.udjaya.kasirudjay.model.Transactions;
 import com.udjaya.kasirudjay.model.User;
 import com.udjaya.kasirudjay.model.UserInfo;
+import com.udjaya.kasirudjay.model.notereceiptscheduler.NoteReceiptScheduler;
 import com.udjaya.kasirudjay.model.printer.Printer;
 import com.udjaya.kasirudjay.model.printer.PrinterDao;
 import com.udjaya.kasirudjay.model.shiftorder.DataModifierTransaction;
@@ -116,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
     String ip;
     int port;
 
-    private int currentZoom = 250; // 100% skala normal
+    private int currentZoom; // 100% skala normal
 
     private static final String TAG = "MainActivity";
 
@@ -133,6 +134,9 @@ public class MainActivity extends AppCompatActivity {
 
         ip = prefManager.getIp();
         port = prefManager.getPort();
+
+        currentZoom = prefManager.getZoom();
+        Log.d(TAG, "onCreate: " + currentZoom);
 
         drawerLayout = findViewById(R.id.drawer_layout);
         inputIP = findViewById(R.id.input_ip_address);
@@ -189,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 getDataStruk("5100", false);
-//                printBluetooth();
+
             }
         });
 
@@ -201,18 +205,20 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        bluetoothDevicesList = (new BluetoothPrintersConnections()).getList();
-        if(bluetoothDevicesList != null){
-            if(bluetoothDevicesList.length > 0){
-                selectedDevice = bluetoothDevicesList[0];
-            }
-        }
+//        bluetoothDevicesList = (new BluetoothPrintersConnections()).getList();
+//        if(bluetoothDevicesList != null){
+//            if(bluetoothDevicesList.length > 0){
+//                selectedDevice = bluetoothDevicesList[0];
+//            }
+//        }
 
         btnZoomIn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (currentZoom < 500) { // batas maksimal zoom (500%)
+                    int newZoom = currentZoom;
                     currentZoom += 1;
+                    prefManager.saveZoom(newZoom += 1);
                     setCustomZoom(currentZoom);
                     etCurrentZoom.setText(String.valueOf(currentZoom));
                 }
@@ -224,7 +230,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (currentZoom > -100) { // batas minimal zoom 50% (bisa diatur sesuai kebutuhan)
+                    int newZoom = currentZoom;
                     currentZoom -= 1;
+                    prefManager.saveZoom(newZoom -= 1);
                     setCustomZoom(currentZoom);
                     etCurrentZoom.setText(String.valueOf(currentZoom));
                 }
@@ -236,7 +244,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (currentZoom < 500) { // batas maksimal zoom (500%)
+                    int newZoom = currentZoom;
                     currentZoom += 10;
+                    prefManager.saveZoom(newZoom += 10);
                     setCustomZoom(currentZoom);
                     etCurrentZoom.setText(String.valueOf(currentZoom));
                 }
@@ -248,7 +258,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (currentZoom > -100) { // batas minimal zoom 50% (bisa diatur sesuai kebutuhan)
+                    int newZoom = currentZoom;
                     currentZoom -= 10;
+                    prefManager.saveZoom(newZoom -= 10);
                     setCustomZoom(currentZoom);
                     etCurrentZoom.setText(String.valueOf(currentZoom));
                 }
@@ -273,8 +285,8 @@ public class MainActivity extends AppCompatActivity {
         MainWebViewClient viewClient = new MainWebViewClient();
         webView.setWebViewClient(viewClient);
 
-        webView.loadUrl("https://udjaya.neidra.my.id/kasir");
-//        webView.loadUrl("https://backoffice.uddjaya.com/kasir");
+//        webView.loadUrl("https://udjaya.neidra.my.id/kasir");
+        webView.loadUrl("https://backoffice.uddjaya.com/kasir");
 
         setCustomZoom(currentZoom);
     }
@@ -435,8 +447,9 @@ public class MainActivity extends AppCompatActivity {
                 List<TransactionItems> detail = response.body().getTransactionItems();
                 User user = response.body().getUser();
                 String device = response.body().getDevice();
+                List<NoteReceiptScheduler> noteReceiptSchedulers = response.body().getNoteReceiptScheduler();
 
-                printBluetooth(transactions, detail, user, device,  isOrder);
+                printBluetooth(transactions, detail, user, device,  isOrder, noteReceiptSchedulers);
 
             }
 
@@ -661,13 +674,18 @@ public class MainActivity extends AppCompatActivity {
 //            checkBluetoothPermissions(this.onBluetoothPermissionsGranted);
 
         } else {
+            bluetoothDevicesList = (new BluetoothPrintersConnections()).getList();
+            if(bluetoothDevicesList != null){
+                if(bluetoothDevicesList.length > 0){
+                    selectedDevice = bluetoothDevicesList[0];
+                }
+            }
             // Semua izin sudah diberikan
             Log.d(TAG, "requestBluetoothPermissions: " + onBluetoothPermissionsGranted);
             if (onBluetoothPermissionsGranted != null) {
 //                onBluetoothPermissionsGranted.onPermissionsGranted();
                 Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                 activity.startActivityForResult(enableBtIntent, PERMISSION_BLUETOOTH);
-
             }
         }
     }
@@ -778,7 +796,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void printBluetooth(Transactions transactions, List<TransactionItems> transactionItems, User user, String device, boolean isOrder) {
+    public void printBluetooth(Transactions transactions, List<TransactionItems> transactionItems, User user, String device, boolean isOrder, List<NoteReceiptScheduler> noteReceiptSchedulers) {
         if(isOrder){
             this.checkBluetoothPermissions(() -> {
                 new AsyncBluetoothEscPosPrint(
@@ -799,112 +817,23 @@ public class MainActivity extends AppCompatActivity {
 
             printUsingFirstPrinter(transactions, transactionItems, user, device);
 
-//            printTcp();
-//            try {
-//
-//                ip = prefManager.getIp();
-//                port = prefManager.getPort();
-//
-////                Log.d(TAG, ip);
-////                Log.d(TAG, String.valueOf(port));
-//
-//                new AsyncTcpEscPosPrint(
-//                        this,
-//                        new AsyncEscPosPrint.OnPrintFinished() {
-//                            @Override
-//                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
-//                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
-//                                Log.e("Async.OnPrintFinished", String.valueOf(codeException));
-//                                Log.e("Async.OnPrintFinished", Arrays.toString(asyncEscPosPrinter.getTextsToPrint()));
-//                            }
-//
-//                            @Override
-//                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
-//                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
-//                            }
-//                        }
-//                )
-//                        .execute(
-//                                this.getAsyncEscPosPrinterOrder(
-//                                        new TcpConnection(
-//                                                ip,
-//                                                port,
-//                                                30000
-//                                        ),  transactions, transactionItems, user, device
-//                                )
-////                                getAsyncEscPosPrinterTest(new TcpConnection(ip, port, 300000))
-//                        );
-//            } catch (NumberFormatException e) {
-//                new AlertDialog.Builder(this)
-//                        .setTitle("Invalid TCP port address")
-//                        .setMessage("Port field must be an integer.")
-//                        .show();
-//                e.printStackTrace();
-//            }
-//        }else{
-//            this.checkBluetoothPermissions(() -> {
-//                new AsyncBluetoothEscPosPrint(
-//                        this,
-//                        new AsyncEscPosPrint.OnPrintFinished() {
-//                            @Override
-//                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
-//                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
-//                            }
-//
-//                            @Override
-//                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
-//                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
-//                            }
-//                        }
-//                ).execute(this.getAsyncEscPosPrinter(selectedDevice, transactions, transactionItems));
-//            });
-//
-//            try {
-//
-//                ip = prefManager.getIp();
-//                port = prefManager.getPort();
-//
-////                Log.d(TAG, ip);
-////                Log.d(TAG, String.valueOf(port));
-//
-//                new AsyncTcpEscPosPrint(
-//                        this,
-//                        new AsyncEscPosPrint.OnPrintFinished() {
-//                            @Override
-//                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
-//                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
-//                                Log.e("Async.OnPrintFinished", String.valueOf(codeException));
-//                                Log.e("Async.OnPrintFinished", Arrays.toString(asyncEscPosPrinter.getTextsToPrint()));
-//                            }
-//
-//                            @Override
-//                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
-//                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
-//                            }
-//                        }
-//                )
-//                        .execute(
-//                                this.getAsyncEscPosPrinter(new TcpConnection(
-//                                        ip,
-//                                        port,
-//                                        30000
-//                                ), transactions, transactionItems)
-////                                this.getAsyncEscPosPrinterOrder(
-////                                        new TcpConnection(
-////                                                ip,
-////                                                port,
-////                                                30000
-////                                        ),  transactions, transactionItems, user, device
-////                                )
-////                                getAsyncEscPosPrinterTest(new TcpConnection(ip, port, 300000))
-//                        );
-//            } catch (NumberFormatException e) {
-//                new AlertDialog.Builder(this)
-//                        .setTitle("Invalid TCP port address")
-//                        .setMessage("Port field must be an integer.")
-//                        .show();
-//                e.printStackTrace();
-//            }
+        }else{
+            this.checkBluetoothPermissions(() -> {
+                new AsyncBluetoothEscPosPrint(
+                        this,
+                        new AsyncEscPosPrint.OnPrintFinished() {
+                            @Override
+                            public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+                                Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
+                            }
+
+                            @Override
+                            public void onSuccess(AsyncEscPosPrinter asyncEscPosPrinter) {
+                                Log.i("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : Print is finished !");
+                            }
+                        }
+                ).execute(this.getAsyncEscPosPrinter(selectedDevice, transactions, transactionItems, noteReceiptSchedulers));
+            });
         }
     }
 
@@ -976,9 +905,10 @@ public class MainActivity extends AppCompatActivity {
 
 
     @SuppressLint("SimpleDateFormat")
-    public AsyncEscPosPrinter getAsyncEscPosPrinter(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems) {
+    public AsyncEscPosPrinter getAsyncEscPosPrinter(DeviceConnection printerConnection, Transactions transactions, List<TransactionItems> transactionItems, List<NoteReceiptScheduler> noteReceiptSchedulers) {
         String item = "";
         String taxItem = "";
+        String noteSchedulerText = "";
         int totalPajak = 0;
         int subTotal = 0;
         for (TransactionItems data : transactionItems){
@@ -1013,6 +943,11 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "getAsyncEscPosPrinter: " + data.getCatatan());
 
             item += "[C]--------------------------------\n";
+        }
+
+        for(NoteReceiptScheduler noteReceiptScheduler : noteReceiptSchedulers){
+            noteSchedulerText += "[C]" + noteReceiptScheduler.getMessage() + "\n";
+            noteSchedulerText += "[C]--------------------------------\n";
         }
 
         for(Tax tax : transactions.getTax()){
@@ -1074,6 +1009,8 @@ public class MainActivity extends AppCompatActivity {
                         "[L]\n" +
                         "[C]--------------------------------\n" +
                         "[L]Instagram: ud.djaya[C][R] \n" +
+                        "[C]--------------------------------\n" +
+                        noteSchedulerText +
                         "\n" +
                         catatanNota +
                         "[C]--------------------------------\n" +
@@ -1659,7 +1596,7 @@ public class MainActivity extends AppCompatActivity {
 
             List<TransactionItems> filterItem = filterTransactionItemsByPrinterCategory(transactionItems, firstPrinter);
 
-            Log.d("TestingPrinter", String.valueOf(filterItem.size()));
+
             if (firstPrinter != null && filterItem.size() > 0) {
                 String ip = firstPrinter.getIp();
                 int port = firstPrinter.getPort();
@@ -1695,7 +1632,7 @@ public class MainActivity extends AppCompatActivity {
                 });
             } else {
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "No printer data found", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "No printer wifi data found", Toast.LENGTH_SHORT).show();
                 });
             }
         }).start();
@@ -1703,6 +1640,11 @@ public class MainActivity extends AppCompatActivity {
 
     // Fungsi filter transactionItems sesuai listCategory printer
     public List<TransactionItems> filterTransactionItemsByPrinterCategory(List<TransactionItems> transactionItems, Printer printer) {
+        if (printer == null) {
+            Log.e("filterTransactionItems", "Printer object is null");
+            return transactionItems; // fallback: kembalikan semua jika printer null
+        }
+
         List<Integer> allowedCategories = printer.getListCategory();
         if (allowedCategories == null || allowedCategories.isEmpty()) {
             // Jika listCategory printer kosong, kembalikan semua item tanpa filter
