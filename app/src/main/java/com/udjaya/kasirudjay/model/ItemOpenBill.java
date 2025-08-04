@@ -24,6 +24,8 @@ public class ItemOpenBill {
     private String updated_at;
     private String deleted_at;
 
+    private Product product;
+
     public int getId() {
         return id;
     }
@@ -182,5 +184,13 @@ public class ItemOpenBill {
 
     public void setDeleted_at(String deleted_at) {
         this.deleted_at = deleted_at;
+    }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public void setProduct(Product product) {
+        this.product = product;
     }
 }

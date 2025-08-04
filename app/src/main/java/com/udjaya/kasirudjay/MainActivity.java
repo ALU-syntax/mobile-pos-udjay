@@ -494,6 +494,7 @@ public class MainActivity extends AppCompatActivity {
                 OpenBill openBill = response.body().getData();
 
                 printBluetoothOpenBill(openBill);
+                printTcpOpenBill(openBill);
             }
 
             @Override
@@ -1187,7 +1188,69 @@ public class MainActivity extends AppCompatActivity {
 //            logErrorToApi(e, data);
             throw new RuntimeException(e);
         }
+    }
 
+    @SuppressLint("MissingPermission")
+    public AsyncEscPosPrinter  getAsyncEscPosPrinterTcpOpenBill(DeviceConnection printerConnection, List<ItemOpenBill> data, OpenBill dataOpenBill){
+        try {
+            String item = "";
+            Log.d(TAG, "getAsyncPrintOpenBill: " + data);
+            if (!data.isEmpty()){
+                for (ItemOpenBill itemOpenBill : data){
+                    if(itemOpenBill.getProduct_id() != null || itemOpenBill.getProduct_id() != "null"){
+                        if(Objects.equals(itemOpenBill.getNama_product(), itemOpenBill.getNama_variant())){
+                            item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + itemOpenBill.getNama_product() + "</b>[C] \n";
+                        }else{
+                            item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + itemOpenBill.getNama_product() + "-" + itemOpenBill.getNama_variant() + "</b>[C] \n";
+                        }
+
+                    }else{
+                        item += "[L]<b>"+ itemOpenBill.getQuantity() + "x " + "custom" +"</b>[C]\n";
+                    }
+
+                    for(ModifierOpenBill modifierOpenBill: itemOpenBill.getModifier()){
+                        item +=  "[L]" +modifierOpenBill.getName()+"\n";
+                    }
+
+                    if(itemOpenBill.getCatatan() != null && !Objects.equals(itemOpenBill.getCatatan(), "")){
+                        item += "[L]" +itemOpenBill.getCatatan()+"\n";
+                    }
+                }
+
+            }
+
+
+            String deviceBrand = Build.BRAND;
+            System.out.println("Device Brand: " + deviceBrand);
+            // Buat objek Date saat ini
+            Date currentDate = new Date();
+
+            // Buat instance SimpleDateFormat untuk format tanggal
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+            // Buat instance SimpleDateFormat untuk format waktu
+            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+
+            // Format tanggal dan waktu
+            String formattedDate = dateFormat.format(currentDate);
+            String formattedTime = timeFormat.format(currentDate);
+
+            AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+            return printer.addTextToPrint(
+                    "[C]ADDITIONAL ORDER\n" +
+                            "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
+                            "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
+                            "[L]" + dataOpenBill.getUser().getName() + "[C][R]" + deviceBrand + "\n" +
+                            "[C]--------------------------------\n" +
+                            "[C]Dine In\n" +
+                            "[C]--------------------------------\n" +
+                            item
+            );
+
+        } catch (Exception e) {
+//            logErrorToApi(e, data);
+            throw new RuntimeException(e);
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -1638,6 +1701,56 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void printTcpOpenBill(OpenBill openBill){
+        PrinterDao printerDao = db.printerDao();
+
+        new Thread(() -> {
+            Printer firstPrinter = printerDao.getFirstPrinter();
+
+            List<ItemOpenBill> filterItem = filterOpenBillItemByPrinterCategory(openBill.getItem(), firstPrinter);
+
+
+            if (firstPrinter != null && filterItem.size() > 0) {
+                String ip = firstPrinter.getIp();
+                int port = firstPrinter.getPort();
+
+                runOnUiThread(() -> {
+                    try {
+                        new AsyncTcpEscPosPrint(
+                                this,
+                                new AsyncEscPosPrint.OnPrintFinished() {
+                                    @Override
+                                    public void onError(AsyncEscPosPrinter printer, int codeException) {
+                                        Log.e("Async.OnPrintFinished", "An error occurred! Code: " + codeException);
+                                    }
+
+                                    @Override
+                                    public void onSuccess(AsyncEscPosPrinter printer) {
+                                        Log.i("Async.OnPrintFinished", "Print finished successfully!");
+                                    }
+                                }
+                        ).execute(
+                                getAsyncEscPosPrinterTcpOpenBill(new TcpConnection(ip, port, 30000), filterItem, openBill)
+                        );
+                    } catch (NumberFormatException e) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("Invalid TCP port address")
+                                .setMessage("Port field must be an integer.")
+                                .show();
+                        e.printStackTrace();
+                    }
+                });
+            } else {
+                if(firstPrinter != null){
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "No printer wifi data found", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        }).start();
+
+    }
+
     // Fungsi filter transactionItems sesuai listCategory printer
     public List<TransactionItems> filterTransactionItemsByPrinterCategory(List<TransactionItems> transactionItems, Printer printer) {
         if (printer == null) {
@@ -1654,6 +1767,31 @@ public class MainActivity extends AppCompatActivity {
         List<TransactionItems> filteredList = new ArrayList<>();
 
         for (TransactionItems item : transactionItems) {
+            Log.d("Check Category Item Transaksi", item.getProduct().getCategory_id());
+            if (item.getProduct() != null && allowedCategories.contains(Integer.parseInt(item.getProduct().getCategory_id()))) {
+                filteredList.add(item);
+            }
+        }
+
+        return filteredList;
+    }
+
+    public List<ItemOpenBill> filterOpenBillItemByPrinterCategory(List<ItemOpenBill> openBillItems, Printer printer){
+        if(printer == null){
+            Log.e("filterTransactionItems", "Printer object is null");
+            return openBillItems; // fallback: kembalikan semua jika printer null
+        }
+
+        List<ItemOpenBill> filteredList = new ArrayList<>();
+
+        List<Integer> allowedCategories = printer.getListCategory();
+        if(allowedCategories == null || allowedCategories.isEmpty()){
+            // Jika listCategory printer kosong, kembalikan item kosong
+            return filteredList;
+        }
+
+
+        for(ItemOpenBill item : openBillItems){
             Log.d("Check Category Item Transaksi", item.getProduct().getCategory_id());
             if (item.getProduct() != null && allowedCategories.contains(Integer.parseInt(item.getProduct().getCategory_id()))) {
                 filteredList.add(item);
