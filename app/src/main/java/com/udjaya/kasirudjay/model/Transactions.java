@@ -28,6 +28,7 @@ public class Transactions {
     private User user;
     private List<Tax> tax;
     private String potongan_point;
+    private Customer customer;
 
     public List<Tax> getTax() {
         return tax;
@@ -227,5 +228,13 @@ public class Transactions {
 
     public void setPotongan_point(String potongan_point) {
         this.potongan_point = potongan_point;
+    }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
     }
 }

@@ -8,6 +8,8 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -278,6 +280,10 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setSupportZoom(false);
 
         webSettings.setJavaScriptEnabled(true);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
 
 
         webView.addJavascriptInterface(new WebAppInterface(this), "Android");
@@ -285,10 +291,27 @@ public class MainActivity extends AppCompatActivity {
         MainWebViewClient viewClient = new MainWebViewClient();
         webView.setWebViewClient(viewClient);
 
+        if (isNetworkAvailable(this)) {
+            webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+        } else {
+            webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        }
+
 //        webView.loadUrl("https://udjaya.neidra.my.id/kasir");
         webView.loadUrl("https://backoffice.uddjaya.com/kasir");
+//        webView.loadUrl("https://dev-backoffice.uddjaya.com/kasir");
 
         setCustomZoom(currentZoom);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (isNetworkAvailable(this)) {
+            webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+        } else {
+            webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        }
     }
 
     private void logErrorToApi(Exception e, OpenBill data) {
@@ -910,6 +933,7 @@ public class MainActivity extends AppCompatActivity {
         String item = "";
         String taxItem = "";
         String noteSchedulerText = "";
+        String customerText = "";
         int totalPajak = 0;
         int subTotal = 0;
         for (TransactionItems data : transactionItems){
@@ -944,6 +968,15 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "getAsyncEscPosPrinter: " + data.getCatatan());
 
             item += "[C]--------------------------------\n";
+        }
+
+        Log.d(TAG, "membership: " + transactions.getCustomer());
+        if(transactions.getCustomer() != null){
+            customerText += "[L]Membership" + "\n";
+            customerText += "[L]Nama: " + transactions.getCustomer().getName() + "\n";
+            customerText += "[L]EXP: " + String.valueOf(transactions.getCustomer().getExp()) + "\n";
+            customerText += "[L]Point: " + String.valueOf(transactions.getCustomer().getPoint()) + "\n";
+            customerText += "[C]--------------------------------\n";
         }
 
         for(NoteReceiptScheduler noteReceiptScheduler : noteReceiptSchedulers){
@@ -1011,6 +1044,7 @@ public class MainActivity extends AppCompatActivity {
                         "[C]--------------------------------\n" +
                         "[L]Instagram: ud.djaya[C][R] \n" +
                         "[C]--------------------------------\n" +
+                        customerText +
                         noteSchedulerText +
                         "\n" +
                         catatanNota +
@@ -1292,9 +1326,13 @@ public class MainActivity extends AppCompatActivity {
         String formattedTime = timeFormat.format(currentDate);
 
         AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
+        String checkDeviceName = (selectedDevice != null)
+                ? selectedDevice.getDevice().getName()
+                : "-";
+
         return printer.addTextToPrint(
                 "[C]<font >ADDITIONAL ORDER</font>\n" +
-                        "[L]Test Print[C][R] " + selectedDevice.getDevice().getName() + "\n" +
+                        "[L]Test Print[C][R] " + checkDeviceName + "\n" +
                         "[L]" + formattedDate + "[C][R]" + formattedTime + "\n" +
                         "[L]" + user.getName() + "[C][R]" + deviceBrand + "\n" +
                         "[C]--------------------------------\n" +
@@ -1748,7 +1786,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }).start();
-
     }
 
     // Fungsi filter transactionItems sesuai listCategory printer
@@ -1799,5 +1836,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return filteredList;
+    }
+
+    private boolean isNetworkAvailable(Context ctx) {
+        ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
+        return nc != null && (nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                || nc.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                || nc.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
     }
 }
