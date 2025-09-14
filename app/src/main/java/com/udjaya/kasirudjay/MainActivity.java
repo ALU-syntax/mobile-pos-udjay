@@ -1804,8 +1804,8 @@ public class MainActivity extends AppCompatActivity {
         List<TransactionItems> filteredList = new ArrayList<>();
 
         for (TransactionItems item : transactionItems) {
-            Log.d("Check Category Item Transaksi", item.getProduct().getCategory_id());
             if (item.getProduct() != null && allowedCategories.contains(Integer.parseInt(item.getProduct().getCategory_id()))) {
+//                Log.d("Check Category Item Transaksi", item.getProduct().getCategory_id());
                 filteredList.add(item);
             }
         }
