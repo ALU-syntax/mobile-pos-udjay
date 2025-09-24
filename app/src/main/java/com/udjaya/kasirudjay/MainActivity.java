@@ -73,6 +73,8 @@ import com.udjaya.kasirudjay.services.AsyncBluetoothEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrinter;
 import com.udjaya.kasirudjay.services.AsyncTcpEscPosPrint;
+import com.udjaya.kasirudjay.utils.LogStore;
+import com.udjaya.kasirudjay.utils.MediaStoreLog;
 import com.udjaya.kasirudjay.utils.RClient;
 import com.udjaya.kasirudjay.utils.SharedPrefManager;
 
@@ -460,10 +462,12 @@ public class MainActivity extends AppCompatActivity {
         call.enqueue(new Callback<GetStruk>() {
             @Override
             public void onResponse(Call<GetStruk> call, Response<GetStruk> response) {
+
                 Log.d("Transaction API", "onResponse: " + response);
                 Log.d("Transaction API", "onResponse: " + response.body());
                 assert response.body() != null;
                 Log.d("Transaction API", "onResponse: " + response.body().getTransaction());
+
                 assert response.body() != null;
                 Transactions transactions = response.body().getTransaction();
 
@@ -472,6 +476,11 @@ public class MainActivity extends AppCompatActivity {
                 String device = response.body().getDevice();
                 List<NoteReceiptScheduler> noteReceiptSchedulers = response.body().getNoteReceiptScheduler();
 
+                Toast.makeText(MainActivity.super.getApplicationContext(), response.body().toString(), Toast.LENGTH_LONG).show();
+                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [API_GET_STRUK_SUCCESS] " + response.body().toString());
+//                LogStore.get(MainActivity.super.getApplicationContext()).write("GET_DATA_STRUK", response.body().toString());
+
                 printBluetooth(transactions, detail, user, device,  isOrder, noteReceiptSchedulers);
 
             }
@@ -479,6 +488,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<GetStruk> call, Throwable t) {
                 Log.d(TAG, "onFailure: " + t.getMessage());
+                Toast.makeText(MainActivity.this, t.getMessage(), Toast.LENGTH_LONG).show();
+                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [API_GET_STRUK_FAILURE] " + t.getMessage());
+//                LogStore.get(MainActivity.super.getApplicationContext()).write("GET_DATA_STRUK", t.getMessage());
             }
         });
     }
@@ -492,6 +505,11 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("Transaction API", "onResponse: " + response.body());
                 assert response.body() != null;
                 Log.d("Transaction API", "onResponse: " + response.body().getTransaction());
+                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [API_GET_STRUK_HISTORY_SUCCESS] " + response.body().toString());
+
+                Toast.makeText(MainActivity.super.getApplicationContext(), response.body().toString(), Toast.LENGTH_LONG).show();
+//                LogStore.get(MainActivity.super.getApplicationContext()).write("GET_DATA_STRUK", response.body().toString());
                 assert response.body() != null;
                 Transactions transactions = response.body().getTransaction();
 
@@ -503,6 +521,10 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<GetStruk> call, Throwable t) {
+                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [API_GET_STRUK_HISTORY_FAILURE] " + t.getMessage());
+                Toast.makeText(MainActivity.super.getApplicationContext(), t.getMessage(), Toast.LENGTH_LONG).show();
+//                LogStore.get(MainActivity.super.getApplicationContext()).write("GET_DATA_STRUK", t.getMessage());
                 Log.d(TAG, "onFailure: " + t.getMessage());
             }
         });
@@ -828,6 +850,10 @@ public class MainActivity extends AppCompatActivity {
                         new AsyncEscPosPrint.OnPrintFinished() {
                             @Override
                             public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+                                Toast.makeText(MainActivity.super.getApplicationContext(), String.valueOf(codeException), Toast.LENGTH_LONG).show();
+                                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [BT_PRINTER_BLUETOOTH_ERROR] " + String.valueOf(codeException));
+//                                LogStore.get(MainActivity.super.getApplicationContext()).write("GET_DATA_STRUK", String.valueOf(codeException));
                                 Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
                             }
 
@@ -848,6 +874,8 @@ public class MainActivity extends AppCompatActivity {
                         new AsyncEscPosPrint.OnPrintFinished() {
                             @Override
                             public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+                                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [BT_PRINTER_BILL_ERROR] " + String.valueOf(codeException));
                                 Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
                             }
 
@@ -868,6 +896,10 @@ public class MainActivity extends AppCompatActivity {
                     new AsyncEscPosPrint.OnPrintFinished() {
                         @Override
                         public void onError(AsyncEscPosPrinter asyncEscPosPrinter, int codeException) {
+                            Toast.makeText(MainActivity.super.getApplicationContext(), String.valueOf(codeException), Toast.LENGTH_LONG).show();
+                            String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                            MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [BT_PRINTER_HISTORY_ERROR] " + String.valueOf(codeException));
+//                            LogStore.get(MainActivity.super.getApplicationContext()).write("GET_DATA_STRUK", String.valueOf(codeException));
                             Log.e("Async.OnPrintFinished", "AsyncEscPosPrint.OnPrintFinished : An error occurred !");
                         }
 
