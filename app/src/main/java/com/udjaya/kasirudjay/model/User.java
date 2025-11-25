@@ -16,6 +16,26 @@ public class User {
     private String created_at;
     private String updated_at;
 
+    public User() {
+    }
+
+    public User(String id, String name, String username, String email, int status, int role, String email_verified_at, String password, int deleted, String outlet_id, String pin, String remember_token, String created_at, String updated_at) {
+        this.id = id;
+        this.name = name;
+        this.username = username;
+        this.email = email;
+        this.status = status;
+        this.role = role;
+        this.email_verified_at = email_verified_at;
+        this.password = password;
+        this.deleted = deleted;
+        this.outlet_id = outlet_id;
+        this.pin = pin;
+        this.remember_token = remember_token;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+    }
+
     public String getId() {
         return id;
     }

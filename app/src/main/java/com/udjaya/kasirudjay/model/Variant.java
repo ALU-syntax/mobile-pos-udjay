@@ -10,6 +10,20 @@ public class Variant {
     private String updated_at;
     private String deleted_at;
 
+    public Variant() {
+    }
+
+    public Variant(int id, String name, int harga, String stok, int product_id, String created_at, String updated_at, String deleted_at) {
+        this.id = id;
+        this.name = name;
+        this.harga = harga;
+        this.stok = stok;
+        this.product_id = product_id;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+        this.deleted_at = deleted_at;
+    }
+
     public int getId() {
         return id;
     }

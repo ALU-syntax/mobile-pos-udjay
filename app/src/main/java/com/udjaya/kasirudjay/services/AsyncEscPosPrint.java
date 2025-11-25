@@ -50,6 +50,7 @@ public abstract class AsyncEscPosPrint extends AsyncTask<AsyncEscPosPrinter, Int
         this.publishProgress(AsyncEscPosPrint.PROGRESS_CONNECTING);
 
         AsyncEscPosPrinter printerData = printersData[0];
+        EscPosPrinter printer = null;
 
         try {
             DeviceConnection deviceConnection = printerData.getPrinterConnection();
@@ -58,7 +59,7 @@ public abstract class AsyncEscPosPrint extends AsyncTask<AsyncEscPosPrinter, Int
                 return new PrinterStatus(null, AsyncEscPosPrint.FINISH_NO_PRINTER);
             }
 
-            EscPosPrinter printer = new EscPosPrinter(
+            printer = new EscPosPrinter(
                     deviceConnection,
                     printerData.getPrinterDpi(),
                     printerData.getPrinterWidthMM(),
@@ -93,6 +94,11 @@ public abstract class AsyncEscPosPrint extends AsyncTask<AsyncEscPosPrinter, Int
             return new PrinterStatus(printerData, AsyncEscPosPrint.FINISH_BARCODE_ERROR);
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+        finally {
+            if (printer != null) {
+                try { printer.disconnectPrinter(); } catch (Exception ignore) {}
+            }
         }
         return new PrinterStatus(printerData, AsyncEscPosPrint.FINISH_SUCCESS);
     }

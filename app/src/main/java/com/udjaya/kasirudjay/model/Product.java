@@ -12,6 +12,22 @@ public class Product {
     private String creted_at;
     private String updated_at;
 
+    public Product() {
+    }
+
+    public Product(int id, String name, String category_id, String status, String photo, String harga_modal, String deleted_at, String outlet_id, String creted_at, String updated_at) {
+        this.id = id;
+        this.name = name;
+        this.category_id = category_id;
+        this.status = status;
+        this.photo = photo;
+        this.harga_modal = harga_modal;
+        this.deleted_at = deleted_at;
+        this.outlet_id = outlet_id;
+        this.creted_at = creted_at;
+        this.updated_at = updated_at;
+    }
+
     public int getId() {
         return id;
     }

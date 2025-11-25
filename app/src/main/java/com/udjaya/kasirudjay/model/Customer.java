@@ -19,6 +19,28 @@ public class Customer {
     private int referral_id;
     private int level_memberships_id;
 
+    public Customer() {
+    }
+
+    public Customer(int id, String name, String telfon, int umur, String email, String tanggal_lahir, String domisili, String gender, int community_id, String deleted_at, String created_at, String updated_at, int exp, int point, int referral_id, int level_memberships_id) {
+        this.id = id;
+        this.name = name;
+        this.telfon = telfon;
+        this.umur = umur;
+        this.email = email;
+        this.tanggal_lahir = tanggal_lahir;
+        this.domisili = domisili;
+        this.gender = gender;
+        this.community_id = community_id;
+        this.deleted_at = deleted_at;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+        this.exp = exp;
+        this.point = point;
+        this.referral_id = referral_id;
+        this.level_memberships_id = level_memberships_id;
+    }
+
     public int getId() {
         return id;
     }

@@ -30,6 +30,39 @@ public class Transactions {
     private String potongan_point;
     private Customer customer;
 
+
+    public Transactions() {
+    }
+
+    public Transactions(String id, String outlet_id, String user_id, String customer_id, String total, String nominal_bayar, String change, String category_payment, String tipe_pembayaran, String nama_tipe_pembayaran, String total_pajak, String total_modifier, String total_diskon, String diskon_all_item, String rounding_amount, String tanda_rounding, String catatan, String patty_cash_id, String deleted_at, String created_at, String updated_at, Outlet outlet, User user, List<Tax> tax, String potongan_point, Customer customer) {
+        this.id = id;
+        this.outlet_id = outlet_id;
+        this.user_id = user_id;
+        this.customer_id = customer_id;
+        this.total = total;
+        this.nominal_bayar = nominal_bayar;
+        this.change = change;
+        this.category_payment = category_payment;
+        this.tipe_pembayaran = tipe_pembayaran;
+        this.nama_tipe_pembayaran = nama_tipe_pembayaran;
+        this.total_pajak = total_pajak;
+        this.total_modifier = total_modifier;
+        this.total_diskon = total_diskon;
+        this.diskon_all_item = diskon_all_item;
+        this.rounding_amount = rounding_amount;
+        this.tanda_rounding = tanda_rounding;
+        this.catatan = catatan;
+        this.patty_cash_id = patty_cash_id;
+        this.deleted_at = deleted_at;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+        this.outlet = outlet;
+        this.user = user;
+        this.tax = tax;
+        this.potongan_point = potongan_point;
+        this.customer = customer;
+    }
+
     public List<Tax> getTax() {
         return tax;
     }

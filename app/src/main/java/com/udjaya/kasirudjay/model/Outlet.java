@@ -10,6 +10,20 @@ public class Outlet {
     private User user_started;
     private String catatan_nota;
 
+    public Outlet() {
+    }
+
+    public Outlet(int id, String name, String address, String phone, String created_at, String updated_at, User user_started, String catatan_nota) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.phone = phone;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+        this.user_started = user_started;
+        this.catatan_nota = catatan_nota;
+    }
+
     public int getId() {
         return id;
     }

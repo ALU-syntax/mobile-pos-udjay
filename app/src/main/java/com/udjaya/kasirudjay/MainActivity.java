@@ -47,6 +47,7 @@ import com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnection
 import com.dantsu.escposprinter.connection.tcp.TcpConnection;
 import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
 import com.udjaya.kasirudjay.api.ApiService;
+import com.udjaya.kasirudjay.model.Customer;
 import com.udjaya.kasirudjay.model.DeviceInfo;
 import com.udjaya.kasirudjay.model.GetOpenBillStruk;
 import com.udjaya.kasirudjay.model.GetStruk;
@@ -54,11 +55,14 @@ import com.udjaya.kasirudjay.model.ItemOpenBill;
 import com.udjaya.kasirudjay.model.LogRequest;
 import com.udjaya.kasirudjay.model.ModifierOpenBill;
 import com.udjaya.kasirudjay.model.OpenBill;
+import com.udjaya.kasirudjay.model.Outlet;
+import com.udjaya.kasirudjay.model.Product;
 import com.udjaya.kasirudjay.model.Tax;
 import com.udjaya.kasirudjay.model.TransactionItems;
 import com.udjaya.kasirudjay.model.Transactions;
 import com.udjaya.kasirudjay.model.User;
 import com.udjaya.kasirudjay.model.UserInfo;
+import com.udjaya.kasirudjay.model.Variant;
 import com.udjaya.kasirudjay.model.notereceiptscheduler.NoteReceiptScheduler;
 import com.udjaya.kasirudjay.model.printer.Printer;
 import com.udjaya.kasirudjay.model.printer.PrinterDao;
@@ -73,6 +77,7 @@ import com.udjaya.kasirudjay.services.AsyncBluetoothEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrinter;
 import com.udjaya.kasirudjay.services.AsyncTcpEscPosPrint;
+import com.udjaya.kasirudjay.utils.DebugUtils;
 import com.udjaya.kasirudjay.utils.LogStore;
 import com.udjaya.kasirudjay.utils.MediaStoreLog;
 import com.udjaya.kasirudjay.utils.RClient;
@@ -470,8 +475,11 @@ public class MainActivity extends AppCompatActivity {
 
                 assert response.body() != null;
                 Transactions transactions = response.body().getTransaction();
+//                DebugUtils.debugTransaction(transactions);
+
 
                 List<TransactionItems> detail = response.body().getTransactionItems();
+//                DebugUtils.debugTransactionItemsList(detail);
                 User user = response.body().getUser();
                 String device = response.body().getDevice();
                 List<NoteReceiptScheduler> noteReceiptSchedulers = response.body().getNoteReceiptScheduler();
@@ -864,7 +872,6 @@ public class MainActivity extends AppCompatActivity {
                         }
                 ).execute(this.getAsyncEscPosPrinterOrder(selectedDevice, transactions, transactionItems, user, device));
             });
-
             printUsingFirstPrinter(transactions, transactionItems, user, device);
 
         }else{
@@ -1370,7 +1377,10 @@ public class MainActivity extends AppCompatActivity {
                         "[C]--------------------------------\n" +
                         "[C]Dine In\n" +
                         "[C]--------------------------------\n" +
-                        item
+                        item +
+                        " \n" +
+                        " \n" +
+                        " \n"
         );
     }
 
@@ -1695,6 +1705,215 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public void handlePrintCoOffline(String json){
+            Log.d(TAG, "handlePrintCoOffline: " + json);
+
+            try {
+                JSONObject jsonObject = new JSONObject(json);
+                Log.d(TAG, "handlePrintCoOffline: " + jsonObject);
+                String status = jsonObject.getString("status");
+                JSONObject dataTransaction = jsonObject.getJSONObject("transaction");
+                Log.d(TAG, "handlePrintCoOffline transaction: " + dataTransaction);
+                JSONObject dataOutlet = dataTransaction.getJSONObject("outlet");
+                JSONObject dataUser = dataTransaction.getJSONObject("user");
+
+                JSONArray dataTax = dataTransaction.getJSONArray("tax");
+                List<Tax> taxList = new ArrayList<>();
+
+                String device = jsonObject.getString("device");
+
+                JSONArray dataNoteReceiptScheduling = jsonObject.getJSONArray("noteReceiptScheduler");
+
+                for(int i=0; i < dataNoteReceiptScheduling.length(); i++){
+                    JSONObject obj = dataTax.getJSONObject(i);
+                }
+
+                for (int i = 0; i < dataTax.length(); i++) {
+                    JSONObject obj = dataTax.getJSONObject(i);
+
+                    Tax tax = new Tax(
+                            obj.getInt("id"),
+                            obj.getString("name"),
+                            obj.getString("amount"),
+                            obj.getString("satuan")
+                    );
+
+                    taxList.add(tax);
+                }
+
+                User user = new User(
+                        dataUser.getString("id"),
+                        dataUser.getString("name"),
+                        dataUser.getString("username"),
+                        dataUser.getString("email"),
+                        dataUser.getInt("status"),
+                        dataUser.getInt("role"),
+                        dataUser.getString("email_verified_at"),
+                        null ,
+                        dataUser.getInt("deleted"),
+                        dataUser.getString("outlet_id"),
+                        dataUser.getString("pin"),
+                        null,
+                        dataUser.getString("created_at"),
+                        dataUser.getString("updated_at")
+                );
+
+                Outlet outlet = new Outlet(
+                        dataOutlet.getInt("id"),
+                        dataOutlet.getString("name"),
+                        dataOutlet.getString("address"),
+                        dataOutlet.getString("phone"),
+                        dataOutlet.getString("created_at"),
+                        dataOutlet.getString("updated_at"),
+                        null,
+                        dataOutlet.getString("catatan_nota")
+                );
+
+                Customer customer = null;
+                if(!dataTransaction.isNull("customer")){
+                    JSONObject dataCustomer = dataTransaction.getJSONObject("customer");
+
+                    customer = new Customer(
+                            dataCustomer.getInt("id"),
+                            dataCustomer.getString("name"),
+                            dataCustomer.getString("telfon"),
+                            dataCustomer.getInt("umur"),
+                            dataCustomer.getString("email"),
+                            dataCustomer.getString("tanggal_lahir"),
+                            dataCustomer.getString("domisili"),
+                            dataCustomer.getString("gender"),
+                            0,
+                            dataCustomer.getString("deleted_at"),
+                            dataCustomer.getString("created_at"),
+                            dataCustomer.getString("updated_at"),
+                            dataCustomer.getInt("exp"),
+                            dataCustomer.getInt("point"),
+                            0,
+                            dataCustomer.getInt("level_memberships_id")
+                    );
+                }
+
+
+                Transactions transactions = new Transactions(
+                        dataTransaction.getString("id"),
+                        dataTransaction.getString("outlet_id"),
+                        dataTransaction.getString("user_id"),
+                        dataTransaction.getString("customer_id"),
+                        dataTransaction.getString("total"),
+                        dataTransaction.getString("nominal_bayar"),
+                        dataTransaction.getString("change"),
+                        dataTransaction.getString("category_payment_id"),
+                        dataTransaction.getString("tipe_pembayaran"),
+                        dataTransaction.getString("nama_tipe_pembayaran"),
+                        dataTransaction.getString("total_pajak"),
+                        dataTransaction.getString("total_modifier"),
+                        dataTransaction.getString("total_diskon"),
+                        dataTransaction.getString("diskon_all_item"),
+                        dataTransaction.getString("rounding_amount"),
+                        dataTransaction.getString("tanda_rounding"),
+                        dataTransaction.getString("catatan"),
+                        dataTransaction.getString("patty_cash_id"),
+                        null,
+                        dataTransaction.getString("created_at"),
+                        dataTransaction.getString("updated_at"),
+                        outlet,
+                        user,
+                        taxList,
+                        dataTransaction.getString("potongan_point"),
+                        customer
+                );
+
+                JSONArray dataTransactionItems = jsonObject.getJSONArray("transactionItems");
+                List<TransactionItems> listTransactionItems = new ArrayList<>();
+
+                for(int i=0; i < dataTransactionItems.length(); i++){
+                    JSONObject dataTransactionItemJSONObject = dataTransactionItems.getJSONObject(i);
+
+                    Product transactionProduct;
+                    Variant transactionVariant;
+                    if(!dataTransactionItemJSONObject.isNull("product")){
+                        JSONObject dataProductTransaction = dataTransactionItemJSONObject.getJSONObject("product");
+
+                        transactionProduct = new Product(
+                                dataProductTransaction.getInt("id"),
+                                dataProductTransaction.getString("name"),
+                                dataProductTransaction.getString("category_id"),
+                                dataProductTransaction.getString("status"),
+                                dataProductTransaction.getString("photo"),
+                                dataProductTransaction.getString("harga_modal"),
+                                null,
+                                dataProductTransaction.getString("outlet_id"),
+                                dataProductTransaction.getString("created_at"),
+                                dataProductTransaction.getString("updated_at")
+                        );
+                    }else{
+                        transactionProduct = null;
+                    }
+
+                    if(!dataTransactionItemJSONObject.isNull("variant")){
+                        JSONObject dataVariantTransaction = dataTransactionItemJSONObject.getJSONObject("variant");
+
+                         transactionVariant = new Variant(
+                                dataVariantTransaction.getInt("id"),
+                                dataVariantTransaction.getString("name"),
+                                dataVariantTransaction.getInt("harga"),
+                                dataVariantTransaction.getString("stok"),
+                                dataVariantTransaction.getInt("product_id"),
+                                dataVariantTransaction.getString("created_at"),
+                                dataVariantTransaction.getString("updated_at"),
+                                dataVariantTransaction.getString("deleted_at")
+                        );
+                    }else{
+                        transactionVariant = null;
+                    }
+
+                    JSONArray dataModifierList = dataTransactionItemJSONObject.getJSONArray("modifier");
+                    List<String> listModifierTransaction = new ArrayList<>();
+
+                    Log.d(TAG, "checkDataModifierList: " + dataModifierList);
+                    for(int x = 0; x < dataModifierList.length(); x++){
+                        String modifierName = dataModifierList.get(x).toString();
+                        Log.d(TAG, "checkDataModifierList: " + modifierName);
+                        listModifierTransaction.add(modifierName);
+                    }
+
+                    TransactionItems transactionItems = new TransactionItems(
+                            null,
+                            dataTransactionItemJSONObject.getString("product_id"),
+                            dataTransactionItemJSONObject.getString("variant_id"),
+                            dataTransactionItemJSONObject.getString("discount_id"),
+                            dataTransactionItemJSONObject.getString("modifier_id"),
+                            dataTransactionItemJSONObject.getString("sales_type_id"),
+                            dataTransactionItemJSONObject.getString("transaction_id"),
+                            dataTransactionItemJSONObject.getString("catatan"),
+                            null,
+                            null,
+                            null,
+                            dataTransactionItemJSONObject.getString("reward_item"),
+                            transactionProduct,
+                            listModifierTransaction,
+                            transactionVariant,
+                            dataTransactionItemJSONObject.getString("total_count"),
+                            dataTransactionItemJSONObject.getString("total_transaction")
+                    );
+
+                    listTransactionItems.add(transactionItems);
+                }
+
+                List<NoteReceiptScheduler> noteReceiptSchedulers = new ArrayList<>();
+
+//                DebugUtils.debugTransaction(transactions);
+//                DebugUtils.debugTransactionItemsList(listTransactionItems);
+
+                printBluetooth(transactions, listTransactionItems, user, device,  true, noteReceiptSchedulers);
+
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @JavascriptInterface
         public void handleCetakBillNotReceipt(String jsonData){
             try {
                 JSONObject jsonObject = new JSONObject(jsonData);
@@ -1751,7 +1970,7 @@ public class MainActivity extends AppCompatActivity {
                                 }
                         ).execute(
                                 getAsyncEscPosPrinterOrder(
-                                        new TcpConnection(ip, port, 30000),
+                                        new TcpConnection(ip, port, 5000),
                                         transactions, filterItem, user, device
                                 )
                         );

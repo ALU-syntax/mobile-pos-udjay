@@ -21,6 +21,29 @@ public class TransactionItems {
     private String total_count;
     private String total_transaction;
 
+    public TransactionItems() {
+    }
+
+    public TransactionItems(String id, String product_id, String variant_id, String discount_id, String modifier_id, String sales_type_id, String transaction_id, String catatan, String deleted_at, String created_at, String updated_at, String reward_item, Product product, List<String> modifier, Variant variant, String total_count, String total_transaction) {
+        this.id = id;
+        this.product_id = product_id;
+        this.variant_id = variant_id;
+        this.discount_id = discount_id;
+        this.modifier_id = modifier_id;
+        this.sales_type_id = sales_type_id;
+        this.transaction_id = transaction_id;
+        this.catatan = catatan;
+        this.deleted_at = deleted_at;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+        this.reward_item = reward_item;
+        this.product = product;
+        this.modifier = modifier;
+        this.variant = variant;
+        this.total_count = total_count;
+        this.total_transaction = total_transaction;
+    }
+
     public Variant getVariant() {
         return variant;
     }

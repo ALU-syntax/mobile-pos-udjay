@@ -7,6 +7,16 @@ public class Tax {
     private String satuan;
     private int outlet_id;
 
+    public Tax() {
+    }
+
+    public Tax(int id, String name, String amount, String satuan) {
+        this.id = id;
+        this.name = name;
+        this.amount = amount;
+        this.satuan = satuan;
+    }
+
     public int getId() {
         return id;
     }
