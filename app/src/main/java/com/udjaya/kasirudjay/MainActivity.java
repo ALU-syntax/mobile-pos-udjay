@@ -1292,7 +1292,6 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
-
             String deviceBrand = Build.BRAND;
             System.out.println("Device Brand: " + deviceBrand);
             // Buat objek Date saat ini
@@ -1317,7 +1316,10 @@ public class MainActivity extends AppCompatActivity {
                             "[C]--------------------------------\n" +
                             "[C]Dine In\n" +
                             "[C]--------------------------------\n" +
-                            item
+                            item +
+                            " \n" +
+                            " \n" +
+                            " \n"
             );
 
         } catch (Exception e) {
@@ -2019,7 +2021,7 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 }
                         ).execute(
-                                getAsyncEscPosPrinterTcpOpenBill(new TcpConnection(ip, port, 30000), filterItem, openBill)
+                                getAsyncEscPosPrinterTcpOpenBill(new TcpConnection(ip, port, 5000), filterItem, openBill)
                         );
                     } catch (NumberFormatException e) {
                         new AlertDialog.Builder(this)
