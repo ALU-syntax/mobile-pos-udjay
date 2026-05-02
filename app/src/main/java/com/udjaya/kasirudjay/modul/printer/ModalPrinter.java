@@ -22,11 +22,15 @@ import com.udjaya.kasirudjay.model.Category;
 import com.udjaya.kasirudjay.model.GetCategory;
 import com.udjaya.kasirudjay.model.printer.Printer;
 import com.udjaya.kasirudjay.model.printer.PrinterDao;
+import com.udjaya.kasirudjay.utils.MediaStoreLog;
 import com.udjaya.kasirudjay.utils.PaddingDividerItemDecoration;
 import com.udjaya.kasirudjay.utils.RClient;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -220,6 +224,8 @@ public class ModalPrinter {
 
             @Override
             public void onFailure(Call<GetCategory> call, Throwable t) {
+                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                MediaStoreLog.append(context, ts + " [API_GET_STRUK_HISTORY_FAILURE] " + t.getMessage());
                 Toast.makeText(context, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                 Log.d("Modal Printer", String.valueOf(t.getMessage()));
             }

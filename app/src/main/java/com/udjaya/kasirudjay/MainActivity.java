@@ -77,8 +77,6 @@ import com.udjaya.kasirudjay.services.AsyncBluetoothEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrint;
 import com.udjaya.kasirudjay.services.AsyncEscPosPrinter;
 import com.udjaya.kasirudjay.services.AsyncTcpEscPosPrint;
-import com.udjaya.kasirudjay.utils.DebugUtils;
-import com.udjaya.kasirudjay.utils.LogStore;
 import com.udjaya.kasirudjay.utils.MediaStoreLog;
 import com.udjaya.kasirudjay.utils.RClient;
 import com.udjaya.kasirudjay.utils.SharedPrefManager;
@@ -90,7 +88,6 @@ import org.json.JSONObject;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -342,6 +339,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
+                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [API_GET_STRUK_HISTORY_FAILURE] " + t.getMessage());
                 Log.e("LogError", "Error sending log", t);
             }
         });
@@ -552,6 +551,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<GetOpenBillStruk> call, Throwable t) {
+                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [API_GET_STRUK_HISTORY_FAILURE] " + t.getMessage());
                 Log.d(TAG, "onFailure: " + t.getMessage());
             }
         });
@@ -570,6 +571,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<GetShiftOrderStruk> call, Throwable t) {
+                String ts = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+                MediaStoreLog.append(MainActivity.super.getApplicationContext(), ts + " [API_GET_STRUK_HISTORY_FAILURE] " + t.getMessage());
                 Log.d(TAG, "onFailure: " + t.getMessage());
             }
         });
@@ -1061,7 +1064,7 @@ public class MainActivity extends AppCompatActivity {
         SimpleDateFormat format = new SimpleDateFormat("'on' yyyy-MM-dd 'at' HH:mm:ss");
         AsyncEscPosPrinter printer = new AsyncEscPosPrinter(printerConnection, 203, 48f, 32);
         return printer.addTextToPrint(
-                "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.logo_red, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
+                "[L]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.logo_red, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
                         "[L]\n" +
                         "[C]" + transactions.getOutlet().getAddress() + "\n" +
                         "[C]" + transactions.getOutlet().getPhone()+ "\n" +
@@ -1080,8 +1083,6 @@ public class MainActivity extends AppCompatActivity {
                         "[L]" + transactions.getNama_tipe_pembayaran() + "[C]" + formatRupiah(String.valueOf(transactions.getNominal_bayar()), "Rp. ") + "\n" +
                         "[L]Change [C]" + formatRupiah(String.valueOf(transactions.getChange()), "Rp. ") + "\n" +
                         "[L]\n" +
-                        "[C]--------------------------------\n" +
-                        "[L]Instagram: ud.djaya[C][R] \n" +
                         "[C]--------------------------------\n" +
                         customerText +
                         noteSchedulerText +
@@ -1192,7 +1193,6 @@ public class MainActivity extends AppCompatActivity {
                         "[L]Change [C]" + formatRupiah(String.valueOf(transactions.getChange()), "Rp. ") + "\n" +
                         "[L]\n" +
                         "[C]--------------------------------\n" +
-                        "[L]Instagram: ud.djaya[C][R] \n" +
                         "\n" +
                         catatanNota +
                         "[C]--------------------------------\n" +
@@ -2080,9 +2080,7 @@ public class MainActivity extends AppCompatActivity {
             return filteredList;
         }
 
-
         for(ItemOpenBill item : openBillItems){
-            Log.d("Check Category Item Transaksi", item.getProduct().getCategory_id());
             if (item.getProduct() != null && allowedCategories.contains(Integer.parseInt(item.getProduct().getCategory_id()))) {
                 filteredList.add(item);
             }
